@@ -19,7 +19,9 @@ const (
 )
 
 // TerminalRenderer renders diff results with color-coded terminal output.
-type TerminalRenderer struct{}
+type TerminalRenderer struct {
+	SummaryOnly bool
+}
 
 func NewTerminalRenderer() *TerminalRenderer {
 	return &TerminalRenderer{}
@@ -38,11 +40,13 @@ func (r *TerminalRenderer) Render(w io.Writer, result *diff.DiffResult) error {
 	fmt.Fprintln(w)
 
 	// Per-collection detail sections (only for non-identical collections)
-	for _, coll := range result.Collections {
-		if coll.DiffType == "" || coll.Error != "" {
-			continue // identical or errored, skip detail
+	if !r.SummaryOnly {
+		for _, coll := range result.Collections {
+			if coll.DiffType == "" || coll.Error != "" {
+				continue // identical or errored, skip detail
+			}
+			r.renderCollectionDetail(w, coll)
 		}
-		r.renderCollectionDetail(w, coll)
 	}
 
 	// Summary footer
