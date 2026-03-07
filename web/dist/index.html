@@ -327,6 +327,8 @@
     }
 
     function renderCollectionDOM(parent, coll) {
+      if (coll.diffType === 'identical' && !coll.error) return;
+
       const div = document.createElement('div');
       const cssClass = coll.error ? 'error' : coll.diffType;
       div.className = 'collection coll-' + cssClass;
