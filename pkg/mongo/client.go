@@ -131,6 +131,56 @@ func (c *Client) ListDatabases(ctx context.Context) ([]string, error) {
 	return result, nil
 }
 
+// InsertDocuments inserts multiple documents into a collection.
+func (c *Client) InsertDocuments(ctx context.Context, database, collection string, docs []bson.M) error {
+	if len(docs) == 0 {
+		return nil
+	}
+	coll := c.inner.Database(database).Collection(collection)
+	ifaces := make([]interface{}, len(docs))
+	for i, d := range docs {
+		ifaces[i] = d
+	}
+	_, err := coll.InsertMany(ctx, ifaces)
+	if err != nil {
+		return fmt.Errorf("failed to insert %d documents into %s.%s: %w", len(docs), database, collection, err)
+	}
+	return nil
+}
+
+// ReplaceDocument replaces a single document by _id.
+func (c *Client) ReplaceDocument(ctx context.Context, database, collection string, id interface{}, doc bson.M) error {
+	coll := c.inner.Database(database).Collection(collection)
+	_, err := coll.ReplaceOne(ctx, bson.M{"_id": id}, doc)
+	if err != nil {
+		return fmt.Errorf("failed to replace document in %s.%s: %w", database, collection, err)
+	}
+	return nil
+}
+
+// DeleteDocuments deletes documents by their _id values.
+func (c *Client) DeleteDocuments(ctx context.Context, database, collection string, ids []interface{}) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	coll := c.inner.Database(database).Collection(collection)
+	_, err := coll.DeleteMany(ctx, bson.M{"_id": bson.M{"$in": ids}})
+	if err != nil {
+		return fmt.Errorf("failed to delete documents from %s.%s: %w", database, collection, err)
+	}
+	return nil
+}
+
+// CreateCollection creates a new collection.
+func (c *Client) CreateCollection(ctx context.Context, database, collection string) error {
+	return c.inner.Database(database).CreateCollection(ctx, collection)
+}
+
+// DropCollection drops a collection.
+func (c *Client) DropCollection(ctx context.Context, database, collection string) error {
+	return c.inner.Database(database).Collection(collection).Drop(ctx)
+}
+
 // RedactURI removes password from a MongoDB connection string for safe display.
 func RedactURI(uri string) string {
 	parsed, err := url.Parse(uri)
