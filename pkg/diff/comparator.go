@@ -55,6 +55,10 @@ func compareDocuments(source, target bson.M, prefix string) []FieldDiff {
 // compareValues compares two BSON values at a given path.
 // Rule 1: Type check first. If types differ, it's a modification with type change.
 func compareValues(source, target interface{}, path string) []FieldDiff {
+	// Normalize bson.D to bson.M (both represent documents, D is ordered, M is unordered)
+	source = normalizeValue(source)
+	target = normalizeValue(target)
+
 	// Rule 2: Handle null explicitly
 	sourceIsNil := isNilValue(source)
 	targetIsNil := isNilValue(target)
@@ -264,6 +268,28 @@ func isNilValue(v interface{}) bool {
 	return v == nil
 }
 
+// normalizeValue converts bson.D (ordered document) to bson.M (unordered map)
+// and recursively normalizes bson.A elements. This ensures consistent comparison
+// regardless of whether the driver returns D or M for nested documents.
+func normalizeValue(v interface{}) interface{} {
+	switch val := v.(type) {
+	case bson.D:
+		m := make(bson.M, len(val))
+		for _, elem := range val {
+			m[elem.Key] = normalizeValue(elem.Value)
+		}
+		return m
+	case bson.A:
+		normalized := make(bson.A, len(val))
+		for i, elem := range val {
+			normalized[i] = normalizeValue(elem)
+		}
+		return normalized
+	default:
+		return v
+	}
+}
+
 func bytesEqual(a, b []byte) bool {
 	if len(a) != len(b) {
 		return false
@@ -315,6 +341,8 @@ func FormatValue(v interface{}) string {
 		return "MaxKey"
 	case bson.M:
 		return formatDocument(val)
+	case bson.D:
+		return formatDocument(dToM(val))
 	case bson.A:
 		return formatArray(val)
 	default:
@@ -356,11 +384,21 @@ func BSONTypeName(v interface{}) string {
 		return "MaxKey"
 	case bson.M:
 		return "document"
+	case bson.D:
+		return "document"
 	case bson.A:
 		return "array"
 	default:
 		return reflect.TypeOf(v).String()
 	}
+}
+
+func dToM(d bson.D) bson.M {
+	m := make(bson.M, len(d))
+	for _, elem := range d {
+		m[elem.Key] = elem.Value
+	}
+	return m
 }
 
 func formatFloat(f float64) string {
