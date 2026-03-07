@@ -1,0 +1,19 @@
+# Planning docs (session-specific, not committed)
+docs/plans/
+
+# Binaries
+bin/
+mongodiff
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test
+coverage.out
