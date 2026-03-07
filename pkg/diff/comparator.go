@@ -7,6 +7,7 @@ import (
 	"os"
 	"reflect"
 	"sort"
+	"strings"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
@@ -15,6 +16,33 @@ import (
 // Both documents must be non-nil. Key order is ignored (Rule 3).
 func CompareDocuments(source, target bson.M) []FieldDiff {
 	return compareDocuments(source, target, "")
+}
+
+// CompareDocumentsFiltered compares documents and filters out ignored field paths.
+// ignoreFields should contain dot-notation paths (e.g. "__v", "meta.modified").
+// A field is ignored if its path matches exactly or starts with an ignored prefix
+// (e.g. ignoring "meta" also ignores "meta.created", "meta.modified").
+func CompareDocumentsFiltered(source, target bson.M, ignoreFields []string) []FieldDiff {
+	if len(ignoreFields) == 0 {
+		return CompareDocuments(source, target)
+	}
+	diffs := CompareDocuments(source, target)
+	filtered := make([]FieldDiff, 0, len(diffs))
+	for _, d := range diffs {
+		if !isIgnoredField(d.Path, ignoreFields) {
+			filtered = append(filtered, d)
+		}
+	}
+	return filtered
+}
+
+func isIgnoredField(path string, ignoreFields []string) bool {
+	for _, ig := range ignoreFields {
+		if path == ig || strings.HasPrefix(path, ig+".") || strings.HasPrefix(path, ig+"[") {
+			return true
+		}
+	}
+	return false
 }
 
 func compareDocuments(source, target bson.M, prefix string) []FieldDiff {

@@ -24,12 +24,14 @@ exactly what's different.`,
 }
 
 var (
-	sourceURI string
-	targetURI string
-	database  string
-	include   string
-	exclude   string
-	timeout   int
+	sourceURI   string
+	targetURI   string
+	database    string
+	include     string
+	exclude     string
+	timeout     int
+	summaryOnly bool
+	ignoreFields string
 )
 
 func init() {
@@ -39,6 +41,8 @@ func init() {
 	diffCmd.Flags().StringVar(&include, "include", "", "Comma-separated list of collections to include")
 	diffCmd.Flags().StringVar(&exclude, "exclude", "", "Comma-separated list of collections to exclude")
 	diffCmd.Flags().IntVar(&timeout, "timeout", 30, "Connection timeout in seconds")
+	diffCmd.Flags().BoolVar(&summaryOnly, "summary-only", false, "Show only the collections overview without document details")
+	diffCmd.Flags().StringVar(&ignoreFields, "ignore-fields", "", "Comma-separated list of fields to ignore (e.g. __v,meta.modified)")
 
 	rootCmd.AddCommand(diffCmd)
 }
@@ -98,6 +102,9 @@ func runDiff(cmd *cobra.Command, args []string) error {
 	if exclude != "" {
 		opts.ExcludeCollections = splitCSV(exclude)
 	}
+	if ignoreFields != "" {
+		opts.IgnoreFields = splitCSV(ignoreFields)
+	}
 
 	// Run the diff
 	differ := diff.New(source, target, opts)
@@ -112,6 +119,7 @@ func runDiff(cmd *cobra.Command, args []string) error {
 
 	// Render output
 	renderer := output.NewTerminalRenderer()
+	renderer.SummaryOnly = summaryOnly
 	return renderer.Render(os.Stdout, result)
 }
 

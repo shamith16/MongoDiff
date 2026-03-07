@@ -16,6 +16,7 @@ import (
 type Options struct {
 	IncludeCollections []string
 	ExcludeCollections []string
+	IgnoreFields       []string // dot-notation field paths to ignore (e.g. "__v", "meta.modified")
 }
 
 // Differ performs the comparison between two MongoDB databases.
@@ -263,7 +264,7 @@ func (d *Differ) diffMatchedCollection(ctx context.Context, database, name strin
 			sourceDoc := sourceDocs[id]
 			targetDoc := targetDocs[id]
 
-			fields := CompareDocuments(sourceDoc, targetDoc)
+			fields := CompareDocumentsFiltered(sourceDoc, targetDoc, d.opts.IgnoreFields)
 			if len(fields) == 0 {
 				stats.DocumentsIdentical++
 				continue

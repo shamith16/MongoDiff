@@ -533,6 +533,66 @@ func TestMultipleFieldChanges(t *testing.T) {
 	}
 }
 
+// Ignore fields tests
+func TestIgnoreFieldsExact(t *testing.T) {
+	source := bson.M{"name": "Alice", "__v": int32(2), "status": "active"}
+	target := bson.M{"name": "Alice", "__v": int32(1), "status": "suspended"}
+	diffs := CompareDocumentsFiltered(source, target, []string{"__v"})
+
+	if len(diffs) != 1 {
+		t.Fatalf("expected 1 diff (status only), got %d: %+v", len(diffs), diffs)
+	}
+	if diffs[0].Path != "status" {
+		t.Errorf("expected path 'status', got %s", diffs[0].Path)
+	}
+}
+
+func TestIgnoreFieldsNested(t *testing.T) {
+	source := bson.M{
+		"name": "Alice",
+		"meta": bson.M{"created": "2024-01-01", "modified": "2024-06-01"},
+	}
+	target := bson.M{
+		"name": "Alice",
+		"meta": bson.M{"created": "2024-01-01", "modified": "2024-05-01"},
+	}
+	diffs := CompareDocumentsFiltered(source, target, []string{"meta.modified"})
+
+	if len(diffs) != 0 {
+		t.Errorf("expected no diffs after ignoring meta.modified, got %d", len(diffs))
+	}
+}
+
+func TestIgnoreFieldsPrefix(t *testing.T) {
+	source := bson.M{
+		"name": "Alice",
+		"meta": bson.M{"created": "2024-01-01", "modified": "2024-06-01"},
+	}
+	target := bson.M{
+		"name": "Bob",
+		"meta": bson.M{"created": "2024-02-01", "modified": "2024-05-01"},
+	}
+	// Ignoring "meta" should ignore both meta.created and meta.modified
+	diffs := CompareDocumentsFiltered(source, target, []string{"meta"})
+
+	if len(diffs) != 1 {
+		t.Fatalf("expected 1 diff (name only), got %d: %+v", len(diffs), diffs)
+	}
+	if diffs[0].Path != "name" {
+		t.Errorf("expected path 'name', got %s", diffs[0].Path)
+	}
+}
+
+func TestIgnoreFieldsEmpty(t *testing.T) {
+	source := bson.M{"name": "Alice", "__v": int32(2)}
+	target := bson.M{"name": "Alice", "__v": int32(1)}
+	diffs := CompareDocumentsFiltered(source, target, nil)
+
+	if len(diffs) != 1 {
+		t.Fatalf("expected 1 diff with no ignore, got %d", len(diffs))
+	}
+}
+
 // FormatValue tests
 func TestFormatValueObjectId(t *testing.T) {
 	id := bson.ObjectID{0x66, 0x5a, 0x1b, 0x2c, 0x3d, 0x4e, 0x5f, 0x6a, 0x7b, 0x8c, 0x9d, 0x0e}
