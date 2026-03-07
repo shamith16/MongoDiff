@@ -5,6 +5,9 @@ docs/plans/
 bin/
 /mongodiff
 
+# Backups
+.mongodiff/
+
 # IDE
 .idea/
 .vscode/
