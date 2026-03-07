@@ -3,7 +3,7 @@ docs/plans/
 
 # Binaries
 bin/
-mongodiff
+/mongodiff
 
 # IDE
 .idea/
