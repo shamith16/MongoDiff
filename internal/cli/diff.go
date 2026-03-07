@@ -30,8 +30,9 @@ var (
 	include     string
 	exclude     string
 	timeout     int
-	summaryOnly bool
+	summaryOnly  bool
 	ignoreFields string
+	outputFormat string
 )
 
 func init() {
@@ -43,6 +44,7 @@ func init() {
 	diffCmd.Flags().IntVar(&timeout, "timeout", 30, "Connection timeout in seconds")
 	diffCmd.Flags().BoolVar(&summaryOnly, "summary-only", false, "Show only the collections overview without document details")
 	diffCmd.Flags().StringVar(&ignoreFields, "ignore-fields", "", "Comma-separated list of fields to ignore (e.g. __v,meta.modified)")
+	diffCmd.Flags().StringVar(&outputFormat, "output", "terminal", "Output format: terminal or json")
 
 	rootCmd.AddCommand(diffCmd)
 }
@@ -118,8 +120,17 @@ func runDiff(cmd *cobra.Command, args []string) error {
 	result.Target = mongoclient.RedactURI(targetURI)
 
 	// Render output
-	renderer := output.NewTerminalRenderer()
-	renderer.SummaryOnly = summaryOnly
+	var renderer output.Renderer
+	switch outputFormat {
+	case "json":
+		jr := output.NewJSONRenderer()
+		jr.SummaryOnly = summaryOnly
+		renderer = jr
+	default:
+		tr := output.NewTerminalRenderer()
+		tr.SummaryOnly = summaryOnly
+		renderer = tr
+	}
 	return renderer.Render(os.Stdout, result)
 }
 
