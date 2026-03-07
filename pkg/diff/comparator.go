@@ -3,6 +3,7 @@ package diff
 import (
 	"encoding/base64"
 	"fmt"
+	"math"
 	"os"
 	"reflect"
 	"sort"
@@ -142,7 +143,8 @@ func compareValues(source, target interface{}, path string) []FieldDiff {
 	// Rule 8: Numbers — strict type comparison (double/float64)
 	case float64:
 		tv := target.(float64)
-		if sv != tv {
+		// NaN == NaN is false in IEEE 754, but both being NaN means identical
+		if sv != tv && !(math.IsNaN(sv) && math.IsNaN(tv)) {
 			return []FieldDiff{{Path: path, DiffType: Modified, OldValue: target, NewValue: source}}
 		}
 		return nil

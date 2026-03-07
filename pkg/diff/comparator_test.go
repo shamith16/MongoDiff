@@ -1,6 +1,7 @@
 package diff
 
 import (
+	"math"
 	"testing"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -105,6 +106,27 @@ func TestTypeMismatchInt64VsInt32(t *testing.T) {
 
 	if len(diffs) != 1 {
 		t.Fatalf("expected 1 diff for int64 vs int32, got %d", len(diffs))
+	}
+}
+
+// NaN handling
+func TestNaNIdentical(t *testing.T) {
+	source := bson.M{"value": math.NaN()}
+	target := bson.M{"value": math.NaN()}
+	diffs := CompareDocuments(source, target)
+
+	if len(diffs) != 0 {
+		t.Errorf("expected no diffs for identical NaN values, got %d", len(diffs))
+	}
+}
+
+func TestNaNVsNumber(t *testing.T) {
+	source := bson.M{"value": math.NaN()}
+	target := bson.M{"value": float64(3.0)}
+	diffs := CompareDocuments(source, target)
+
+	if len(diffs) != 1 {
+		t.Fatalf("expected 1 diff for NaN vs number, got %d", len(diffs))
 	}
 }
 
