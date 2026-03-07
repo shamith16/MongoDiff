@@ -110,6 +110,57 @@ func (r *JSONRenderer) Render(w io.Writer, result *diff.DiffResult) error {
 	return encoder.Encode(out)
 }
 
+// CollectionToJSON converts a single CollectionDiff to a JSON-serializable map.
+func CollectionToJSON(coll diff.CollectionDiff) map[string]interface{} {
+	jc := map[string]interface{}{
+		"name":     coll.Name,
+		"diffType": collDiffType(coll),
+		"stats":    coll.Stats,
+	}
+	if coll.Error != "" {
+		jc["error"] = coll.Error
+	}
+
+	var docs []map[string]interface{}
+	for _, doc := range coll.Documents {
+		jd := map[string]interface{}{
+			"_id":      formatIDForJSON(doc.ID),
+			"diffType": string(doc.DiffType),
+		}
+		if doc.Source != nil {
+			jd["source"] = doc.Source
+		}
+		if doc.Target != nil {
+			jd["target"] = doc.Target
+		}
+		var fields []jsonFieldDiff
+		for _, field := range doc.Fields {
+			jf := jsonFieldDiff{
+				Path:     field.Path,
+				DiffType: string(field.DiffType),
+			}
+			if field.OldValue != nil {
+				jf.OldValue = diff.FormatValue(field.OldValue)
+				jf.OldType = diff.BSONTypeName(field.OldValue)
+			}
+			if field.NewValue != nil {
+				jf.NewValue = diff.FormatValue(field.NewValue)
+				jf.NewType = diff.BSONTypeName(field.NewValue)
+			}
+			fields = append(fields, jf)
+		}
+		if len(fields) > 0 {
+			jd["fields"] = fields
+		}
+		docs = append(docs, jd)
+	}
+	if len(docs) > 0 {
+		jc["documents"] = docs
+	}
+
+	return jc
+}
+
 func collDiffType(coll diff.CollectionDiff) string {
 	if coll.Error != "" {
 		return "error"

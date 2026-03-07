@@ -231,22 +231,68 @@
       document.getElementById('summaryBar').classList.add('hidden');
       document.getElementById('syncPlan').classList.add('hidden');
       document.getElementById('btnSync').disabled = true;
+      lastDiffData = { collections: [], stats: {} };
 
       try {
-        const res = await fetch('/api/diff', {
+        const res = await fetch('/api/diff/stream', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
         });
-        const result = await res.json();
 
-        if (result.error) {
-          showStatus(result.error, 'error');
+        if (!res.ok) {
+          const err = await res.json();
+          showStatus(err.error || 'Request failed', 'error');
           return;
         }
 
-        lastDiffData = result;
-        renderDiff(result);
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let collCount = 0;
+
+        // Show summary bar immediately
+        const summaryEl = document.getElementById('summaryBar');
+        summaryEl.className = 'summary-bar';
+        summaryEl.textContent = '';
+        const resultsEl = document.getElementById('results');
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop(); // keep incomplete line
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const event = JSON.parse(line.slice(6));
+
+            if (event.type === 'collection') {
+              collCount++;
+              const coll = event.collection;
+              lastDiffData.collections.push(coll);
+              lastDiffData.stats = event.stats;
+
+              // Update status with progress
+              showStatusLoading('Diffing... ' + collCount + ' collections processed');
+
+              // Append collection to results live
+              renderCollectionDOM(resultsEl, coll);
+
+              // Update summary bar
+              updateSummaryBar(summaryEl, event.stats);
+            } else if (event.type === 'error') {
+              showStatus(event.error, 'error');
+              return;
+            } else if (event.type === 'done') {
+              lastDiffData.source = event.source;
+              lastDiffData.target = event.target;
+            }
+          }
+        }
+
         hideStatus();
         document.getElementById('btnSync').disabled = false;
       } catch (err) {
@@ -256,12 +302,8 @@
       }
     }
 
-    function renderDiff(data) {
-      const stats = data.stats;
-      const summaryEl = document.getElementById('summaryBar');
-      summaryEl.className = 'summary-bar';
+    function updateSummaryBar(summaryEl, stats) {
       summaryEl.textContent = '';
-
       const statItems = [
         { count: stats.CollectionsAdded, label: 'added', dotClass: 'dot-green' },
         { count: stats.CollectionsRemoved, label: 'removed', dotClass: 'dot-red' },
@@ -282,52 +324,49 @@
           summaryEl.appendChild(span);
         }
       }
+    }
 
-      const resultsEl = document.getElementById('results');
-      resultsEl.textContent = '';
+    function renderCollectionDOM(parent, coll) {
+      const div = document.createElement('div');
+      const cssClass = coll.error ? 'error' : coll.diffType;
+      div.className = 'collection coll-' + cssClass;
 
-      for (const coll of data.collections) {
-        const div = document.createElement('div');
-        const cssClass = coll.error ? 'error' : coll.diffType;
-        div.className = 'collection coll-' + cssClass;
+      const header = document.createElement('div');
+      header.className = 'collection-header';
+      header.addEventListener('click', function() {
+        this.nextElementSibling.classList.toggle('open');
+      });
 
-        const header = document.createElement('div');
-        header.className = 'collection-header';
-        header.addEventListener('click', function() {
-          this.nextElementSibling.classList.toggle('open');
-        });
+      const nameSpan = document.createElement('span');
+      nameSpan.appendChild(document.createTextNode(coll.name + ' '));
+      const badge = document.createElement('span');
+      const badgeType = coll.error ? 'error' : coll.diffType;
+      badge.className = 'badge badge-' + badgeType;
+      badge.textContent = badgeType;
+      nameSpan.appendChild(badge);
+      header.appendChild(nameSpan);
 
-        const nameSpan = document.createElement('span');
-        nameSpan.appendChild(document.createTextNode(coll.name + ' '));
-        const badge = document.createElement('span');
-        const badgeType = coll.error ? 'error' : coll.diffType;
-        badge.className = 'badge badge-' + badgeType;
-        badge.textContent = badgeType;
-        nameSpan.appendChild(badge);
-        header.appendChild(nameSpan);
+      const summarySpan = document.createElement('span');
+      summarySpan.style.color = '#8b949e';
+      summarySpan.style.fontSize = '0.85rem';
+      summarySpan.textContent = collSummary(coll);
+      header.appendChild(summarySpan);
 
-        const summarySpan = document.createElement('span');
-        summarySpan.style.color = '#8b949e';
-        summarySpan.style.fontSize = '0.85rem';
-        summarySpan.textContent = collSummary(coll);
-        header.appendChild(summarySpan);
+      div.appendChild(header);
 
-        div.appendChild(header);
-
-        const body = document.createElement('div');
-        body.className = 'collection-body';
-        if (coll.error) {
-          const errDiv = document.createElement('div');
-          errDiv.style.color = '#f85149';
-          errDiv.textContent = coll.error;
-          body.appendChild(errDiv);
-        } else {
-          renderDocumentsDOM(body, coll.documents || []);
-        }
-        div.appendChild(body);
-
-        resultsEl.appendChild(div);
+      const body = document.createElement('div');
+      body.className = 'collection-body';
+      if (coll.error) {
+        const errDiv = document.createElement('div');
+        errDiv.style.color = '#f85149';
+        errDiv.textContent = coll.error;
+        body.appendChild(errDiv);
+      } else {
+        renderDocumentsDOM(body, coll.documents || []);
       }
+      div.appendChild(body);
+
+      parent.appendChild(div);
     }
 
     function collSummary(coll) {

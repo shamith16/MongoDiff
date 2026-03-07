@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -66,6 +67,92 @@ func (s *Server) handleDiff(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(buf.Bytes())
+}
+
+func (s *Server) handleDiffStream(w http.ResponseWriter, r *http.Request) {
+	var req diffRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if req.Source == "" || req.Target == "" || req.Database == "" {
+		writeError(w, http.StatusBadRequest, "source, target, and database are required")
+		return
+	}
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		return
+	}
+
+	timeout := time.Duration(req.Timeout) * time.Second
+	if timeout == 0 {
+		timeout = 30 * time.Second
+	}
+	ctx := r.Context()
+
+	connectCtx, connectCancel := context.WithTimeout(ctx, timeout)
+	defer connectCancel()
+
+	source, err := mongoclient.Connect(connectCtx, req.Source, timeout)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer source.Disconnect(context.Background())
+
+	target, err := mongoclient.Connect(connectCtx, req.Target, timeout)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer target.Disconnect(context.Background())
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	flusher.Flush()
+
+	opts := diff.Options{
+		IncludeCollections: req.Include,
+		ExcludeCollections: req.Exclude,
+		IgnoreFields:       req.IgnoreFields,
+	}
+
+	differ := diff.New(source, target, opts)
+	err = differ.DiffStream(ctx, req.Database, func(coll diff.CollectionDiff, stats diff.DiffStats) {
+		event := map[string]interface{}{
+			"type":       "collection",
+			"collection": output.CollectionToJSON(coll),
+			"stats":      stats,
+		}
+		data, _ := json.Marshal(event)
+		fmt.Fprintf(w, "data: %s\n\n", data)
+		flusher.Flush()
+	})
+
+	if err != nil {
+		errEvent := map[string]interface{}{
+			"type":  "error",
+			"error": err.Error(),
+		}
+		data, _ := json.Marshal(errEvent)
+		fmt.Fprintf(w, "data: %s\n\n", data)
+		flusher.Flush()
+		return
+	}
+
+	// Send done event
+	doneEvent := map[string]interface{}{
+		"type":   "done",
+		"source": mongoclient.RedactURI(req.Source),
+		"target": mongoclient.RedactURI(req.Target),
+	}
+	data, _ := json.Marshal(doneEvent)
+	fmt.Fprintf(w, "data: %s\n\n", data)
+	flusher.Flush()
 }
 
 func (s *Server) handleSyncDryRun(w http.ResponseWriter, r *http.Request) {

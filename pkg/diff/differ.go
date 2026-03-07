@@ -35,6 +35,9 @@ func New(source, target *mongoclient.Client, opts Options) *Differ {
 	}
 }
 
+// CollectionCallback is called with each collection diff as it completes during streaming.
+type CollectionCallback func(coll CollectionDiff, stats DiffStats)
+
 // Diff performs the comparison and returns a structured result.
 // It does not mutate either database.
 func (d *Differ) Diff(ctx context.Context, database string) (*DiffResult, error) {
@@ -43,14 +46,34 @@ func (d *Differ) Diff(ctx context.Context, database string) (*DiffResult, error)
 		Timestamp: time.Now(),
 	}
 
-	// Pass 1: Collection comparison
-	sourceColls, err := d.source.ListCollections(ctx, database)
+	err := d.diffInternal(ctx, database, func(coll CollectionDiff, stats DiffStats) {
+		result.Collections = append(result.Collections, coll)
+		result.Stats = stats
+	})
 	if err != nil {
 		return nil, err
 	}
+
+	return result, nil
+}
+
+// DiffStream performs the comparison and calls onCollection for each collection as it completes.
+// The callback receives the collection diff and cumulative stats so far.
+func (d *Differ) DiffStream(ctx context.Context, database string, onCollection CollectionCallback) error {
+	return d.diffInternal(ctx, database, onCollection)
+}
+
+func (d *Differ) diffInternal(ctx context.Context, database string, onCollection CollectionCallback) error {
+	var stats DiffStats
+
+	// Pass 1: Collection comparison
+	sourceColls, err := d.source.ListCollections(ctx, database)
+	if err != nil {
+		return err
+	}
 	targetColls, err := d.target.ListCollections(ctx, database)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	sourceColls = d.filterCollections(sourceColls)
@@ -59,8 +82,6 @@ func (d *Differ) Diff(ctx context.Context, database string) (*DiffResult, error)
 	sourceSet := toSet(sourceColls)
 	targetSet := toSet(targetColls)
 
-	var collectionDiffs []CollectionDiff
-
 	// Added collections (in source only)
 	added := setDiff(sourceSet, targetSet)
 	sort.Strings(added)
@@ -68,15 +89,12 @@ func (d *Differ) Diff(ctx context.Context, database string) (*DiffResult, error)
 		collDiff, err := d.diffAddedCollection(ctx, database, name)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: skipping collection %q: %v\n", name, err)
-			collectionDiffs = append(collectionDiffs, CollectionDiff{
-				Name:  name,
-				Error: err.Error(),
-			})
+			onCollection(CollectionDiff{Name: name, Error: err.Error()}, stats)
 			continue
 		}
-		collectionDiffs = append(collectionDiffs, collDiff)
-		result.Stats.CollectionsAdded++
-		result.Stats.DocumentsAdded += collDiff.Stats.DocumentsAdded
+		stats.CollectionsAdded++
+		stats.DocumentsAdded += collDiff.Stats.DocumentsAdded
+		onCollection(collDiff, stats)
 	}
 
 	// Removed collections (in target only)
@@ -86,15 +104,12 @@ func (d *Differ) Diff(ctx context.Context, database string) (*DiffResult, error)
 		collDiff, err := d.diffRemovedCollection(ctx, database, name)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: skipping collection %q: %v\n", name, err)
-			collectionDiffs = append(collectionDiffs, CollectionDiff{
-				Name:  name,
-				Error: err.Error(),
-			})
+			onCollection(CollectionDiff{Name: name, Error: err.Error()}, stats)
 			continue
 		}
-		collectionDiffs = append(collectionDiffs, collDiff)
-		result.Stats.CollectionsRemoved++
-		result.Stats.DocumentsRemoved += collDiff.Stats.DocumentsRemoved
+		stats.CollectionsRemoved++
+		stats.DocumentsRemoved += collDiff.Stats.DocumentsRemoved
+		onCollection(collDiff, stats)
 	}
 
 	// Matched collections (in both)
@@ -104,22 +119,18 @@ func (d *Differ) Diff(ctx context.Context, database string) (*DiffResult, error)
 		collDiff, err := d.diffMatchedCollection(ctx, database, name)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: skipping collection %q: %v\n", name, err)
-			collectionDiffs = append(collectionDiffs, CollectionDiff{
-				Name:  name,
-				Error: err.Error(),
-			})
+			onCollection(CollectionDiff{Name: name, Error: err.Error()}, stats)
 			continue
 		}
-		collectionDiffs = append(collectionDiffs, collDiff)
-		result.Stats.CollectionsMatched++
-		result.Stats.DocumentsAdded += collDiff.Stats.DocumentsAdded
-		result.Stats.DocumentsRemoved += collDiff.Stats.DocumentsRemoved
-		result.Stats.DocumentsModified += collDiff.Stats.DocumentsModified
-		result.Stats.DocumentsIdentical += collDiff.Stats.DocumentsIdentical
+		stats.CollectionsMatched++
+		stats.DocumentsAdded += collDiff.Stats.DocumentsAdded
+		stats.DocumentsRemoved += collDiff.Stats.DocumentsRemoved
+		stats.DocumentsModified += collDiff.Stats.DocumentsModified
+		stats.DocumentsIdentical += collDiff.Stats.DocumentsIdentical
+		onCollection(collDiff, stats)
 	}
 
-	result.Collections = collectionDiffs
-	return result, nil
+	return nil
 }
 
 // diffAddedCollection handles a collection that exists only in source.

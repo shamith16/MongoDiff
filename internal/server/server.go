@@ -31,6 +31,7 @@ func (s *Server) Start() error {
 func (s *Server) setupRoutes() {
 	// API routes
 	s.mux.HandleFunc("POST /api/diff", s.handleDiff)
+	s.mux.HandleFunc("POST /api/diff/stream", s.handleDiffStream)
 	s.mux.HandleFunc("POST /api/sync", s.handleSync)
 	s.mux.HandleFunc("POST /api/sync/dry-run", s.handleSyncDryRun)
 	s.mux.HandleFunc("POST /api/test-connection", s.handleTestConnection)
