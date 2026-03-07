@@ -64,18 +64,19 @@ func runDiff(cmd *cobra.Command, args []string) error {
 	}
 
 	timeoutDuration := time.Duration(timeout) * time.Second
-	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
-	defer cancel()
+	ctx := context.Background()
 
-	// Connect to source
-	source, err := mongoclient.Connect(ctx, sourceURI, timeoutDuration)
+	// Connect to source (timeout applies per-operation via Mongo driver's SetTimeout)
+	connectCtx, connectCancel := context.WithTimeout(ctx, timeoutDuration)
+	defer connectCancel()
+	source, err := mongoclient.Connect(connectCtx, sourceURI, timeoutDuration)
 	if err != nil {
 		return fmt.Errorf("source: %w", err)
 	}
 	defer source.Disconnect(context.Background())
 
 	// Connect to target
-	target, err := mongoclient.Connect(ctx, targetURI, timeoutDuration)
+	target, err := mongoclient.Connect(connectCtx, targetURI, timeoutDuration)
 	if err != nil {
 		return fmt.Errorf("target: %w", err)
 	}

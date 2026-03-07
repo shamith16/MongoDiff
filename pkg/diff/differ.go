@@ -3,6 +3,7 @@ package diff
 import (
 	"context"
 	"fmt"
+	"os"
 	"sort"
 	"time"
 
@@ -65,7 +66,12 @@ func (d *Differ) Diff(ctx context.Context, database string) (*DiffResult, error)
 	for _, name := range added {
 		collDiff, err := d.diffAddedCollection(ctx, database, name)
 		if err != nil {
-			return nil, fmt.Errorf("error diffing added collection %s: %w", name, err)
+			fmt.Fprintf(os.Stderr, "Warning: skipping collection %q: %v\n", name, err)
+			collectionDiffs = append(collectionDiffs, CollectionDiff{
+				Name:  name,
+				Error: err.Error(),
+			})
+			continue
 		}
 		collectionDiffs = append(collectionDiffs, collDiff)
 		result.Stats.CollectionsAdded++
@@ -78,7 +84,12 @@ func (d *Differ) Diff(ctx context.Context, database string) (*DiffResult, error)
 	for _, name := range removed {
 		collDiff, err := d.diffRemovedCollection(ctx, database, name)
 		if err != nil {
-			return nil, fmt.Errorf("error diffing removed collection %s: %w", name, err)
+			fmt.Fprintf(os.Stderr, "Warning: skipping collection %q: %v\n", name, err)
+			collectionDiffs = append(collectionDiffs, CollectionDiff{
+				Name:  name,
+				Error: err.Error(),
+			})
+			continue
 		}
 		collectionDiffs = append(collectionDiffs, collDiff)
 		result.Stats.CollectionsRemoved++
@@ -91,7 +102,12 @@ func (d *Differ) Diff(ctx context.Context, database string) (*DiffResult, error)
 	for _, name := range matched {
 		collDiff, err := d.diffMatchedCollection(ctx, database, name)
 		if err != nil {
-			return nil, fmt.Errorf("error diffing collection %s: %w", name, err)
+			fmt.Fprintf(os.Stderr, "Warning: skipping collection %q: %v\n", name, err)
+			collectionDiffs = append(collectionDiffs, CollectionDiff{
+				Name:  name,
+				Error: err.Error(),
+			})
+			continue
 		}
 		collectionDiffs = append(collectionDiffs, collDiff)
 		result.Stats.CollectionsMatched++

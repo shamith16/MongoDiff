@@ -40,6 +40,7 @@ type CollectionDiff struct {
 	DiffType  DiffType
 	Documents []DocumentDiff
 	Stats     DiffStats
+	Error     string // non-empty if the collection was skipped due to an error
 }
 
 // DocumentDiff represents the diff for a single document.

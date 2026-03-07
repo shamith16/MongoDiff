@@ -39,8 +39,8 @@ func (r *TerminalRenderer) Render(w io.Writer, result *diff.DiffResult) error {
 
 	// Per-collection detail sections (only for non-identical collections)
 	for _, coll := range result.Collections {
-		if coll.DiffType == "" {
-			continue // identical, skip detail
+		if coll.DiffType == "" || coll.Error != "" {
+			continue // identical or errored, skip detail
 		}
 		r.renderCollectionDetail(w, coll)
 	}
@@ -52,6 +52,11 @@ func (r *TerminalRenderer) Render(w io.Writer, result *diff.DiffResult) error {
 }
 
 func (r *TerminalRenderer) renderCollectionSummary(w io.Writer, coll diff.CollectionDiff) {
+	if coll.Error != "" {
+		fmt.Fprintf(w, "  %s! %-30s (skipped: %s)%s\n",
+			colorRed, coll.Name, coll.Error, colorReset)
+		return
+	}
 	switch coll.DiffType {
 	case diff.Added:
 		docCount := coll.Stats.DocumentsAdded
