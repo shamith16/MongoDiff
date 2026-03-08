@@ -71,6 +71,16 @@ mongodiff sync \
 
 Backups are saved to `.mongodiff/backups/` as JSON before any changes are applied.
 
+### Restore
+
+Recover from a sync backup:
+
+```bash
+mongodiff restore .mongodiff/backups/2026-03-09T14-30-00Z.json \
+  --target "mongodb://staging.example.com:27017" \
+  --db myapp
+```
+
 ### Web UI
 
 ```bash
@@ -81,7 +91,14 @@ mongodiff serve
 mongodiff serve --port 3000
 ```
 
-Open `http://localhost:8080` for a browser-based UI with connection form, diff viewer, and sync controls.
+Open `http://localhost:8080` for a browser-based UI with connection testing, live-streaming diff results, sync controls, and dark/light theme.
+
+### Docker
+
+```bash
+docker build -t mongodiff .
+docker run -p 8080:8080 mongodiff
+```
 
 ## Output
 
@@ -139,6 +156,14 @@ mongodiff — comparing localhost → staging (database: myapp)
 | `--timeout` | Connection timeout in seconds | 30 |
 | `--dry-run` | Show sync plan without applying | false |
 | `--ignore-fields` | Comma-separated field paths to ignore in comparison | none |
+
+### restore
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--target` | Target MongoDB URI | (required, or `MONGODIFF_TARGET` env) |
+| `--db` | Database to restore into | (required) |
+| `--timeout` | Connection timeout in seconds | 30 |
 
 ### serve
 
