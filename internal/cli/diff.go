@@ -30,9 +30,10 @@ var (
 	include     string
 	exclude     string
 	timeout     int
-	summaryOnly  bool
-	ignoreFields string
-	outputFormat string
+	summaryOnly    bool
+	ignoreFields   string
+	outputFormat   string
+	sourceToTarget bool
 )
 
 func init() {
@@ -45,6 +46,7 @@ func init() {
 	diffCmd.Flags().BoolVar(&summaryOnly, "summary-only", false, "Show only the collections overview without document details")
 	diffCmd.Flags().StringVar(&ignoreFields, "ignore-fields", "", "Comma-separated list of fields to ignore (e.g. __v,meta.modified)")
 	diffCmd.Flags().StringVar(&outputFormat, "output", "terminal", "Output format: terminal or json")
+	diffCmd.Flags().BoolVar(&sourceToTarget, "source-to-target", false, "Only show source→target changes (ignore target-only items)")
 
 	rootCmd.AddCommand(diffCmd)
 }
@@ -107,6 +109,7 @@ func runDiff(cmd *cobra.Command, args []string) error {
 	if ignoreFields != "" {
 		opts.IgnoreFields = splitCSV(ignoreFields)
 	}
+	opts.SourceToTarget = sourceToTarget
 
 	// Run the diff
 	differ := diff.New(source, target, opts)

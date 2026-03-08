@@ -196,6 +196,10 @@
         <label>Ignore fields</label>
         <input type="text" id="ignoreFields" placeholder="__v,meta.modified">
       </div>
+      <div class="form-row" style="display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" id="sourceToTarget" checked style="width:auto;">
+        <label for="sourceToTarget" style="margin:0;cursor:pointer;">Source → Target only <span style="color:var(--text-muted);font-size:0.8rem;">(ignore target-only items)</span></label>
+      </div>
       <div class="form-row btn-group">
         <button class="btn-primary" id="btnDiff" onclick="runDiff()">Run Diff</button>
         <button class="btn-warning" id="btnSync" onclick="runSyncDryRun()" disabled>Sync (Dry Run)</button>
@@ -325,6 +329,7 @@
       if (include) data.include = include.split(',').map(s => s.trim());
       if (exclude) data.exclude = exclude.split(',').map(s => s.trim());
       if (ignore) data.ignoreFields = ignore.split(',').map(s => s.trim());
+      data.sourceToTarget = document.getElementById('sourceToTarget').checked;
       return data;
     }
 

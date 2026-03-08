@@ -15,13 +15,14 @@ import (
 )
 
 type diffRequest struct {
-	Source       string   `json:"source"`
-	Target       string   `json:"target"`
-	Database     string   `json:"database"`
-	Include      []string `json:"include,omitempty"`
-	Exclude      []string `json:"exclude,omitempty"`
-	IgnoreFields []string `json:"ignoreFields,omitempty"`
-	Timeout      int      `json:"timeout,omitempty"`
+	Source         string   `json:"source"`
+	Target         string   `json:"target"`
+	Database       string   `json:"database"`
+	Include        []string `json:"include,omitempty"`
+	Exclude        []string `json:"exclude,omitempty"`
+	IgnoreFields   []string `json:"ignoreFields,omitempty"`
+	Timeout        int      `json:"timeout,omitempty"`
+	SourceToTarget bool     `json:"sourceToTarget,omitempty"`
 }
 
 type connectionTestRequest struct {
@@ -119,6 +120,7 @@ func (s *Server) handleDiffStream(w http.ResponseWriter, r *http.Request) {
 		IncludeCollections: req.Include,
 		ExcludeCollections: req.Exclude,
 		IgnoreFields:       req.IgnoreFields,
+		SourceToTarget:     req.SourceToTarget,
 	}
 
 	differ := diff.New(source, target, opts)
@@ -233,6 +235,7 @@ func (s *Server) handleSync(w http.ResponseWriter, r *http.Request) {
 		IncludeCollections: req.Include,
 		ExcludeCollections: req.Exclude,
 		IgnoreFields:       req.IgnoreFields,
+		SourceToTarget:     req.SourceToTarget,
 	}
 
 	differ := diff.New(source, target, opts)
@@ -328,6 +331,7 @@ func runDiff(req diffRequest) (*diff.DiffResult, func(), error) {
 		IncludeCollections: req.Include,
 		ExcludeCollections: req.Exclude,
 		IgnoreFields:       req.IgnoreFields,
+		SourceToTarget:     req.SourceToTarget,
 	}
 
 	differ := diff.New(source, target, opts)

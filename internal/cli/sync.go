@@ -105,6 +105,7 @@ func runSync(cmd *cobra.Command, args []string) error {
 	if syncIgnoreFields != "" {
 		opts.IgnoreFields = splitCSV(syncIgnoreFields)
 	}
+	opts.SourceToTarget = true // sync only pushes source→target
 
 	// Run the diff first
 	differ := diff.New(source, target, opts)

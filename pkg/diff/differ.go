@@ -17,6 +17,7 @@ type Options struct {
 	IncludeCollections []string
 	ExcludeCollections []string
 	IgnoreFields       []string // dot-notation field paths to ignore (e.g. "__v", "meta.modified")
+	SourceToTarget     bool     // if true, only show source→target changes (ignore target-only items)
 }
 
 // Differ performs the comparison between two MongoDB databases.
@@ -98,8 +99,12 @@ func (d *Differ) diffInternal(ctx context.Context, database string, cbs StreamCa
 	sort.Strings(removed)
 	sort.Strings(matched)
 
+	total := len(added) + len(matched)
+	if !d.opts.SourceToTarget {
+		total += len(removed)
+	}
 	if cbs.OnStart != nil {
-		cbs.OnStart(len(added) + len(removed) + len(matched))
+		cbs.OnStart(total)
 	}
 
 	// Added collections (in source only)
@@ -115,17 +120,19 @@ func (d *Differ) diffInternal(ctx context.Context, database string, cbs StreamCa
 		cbs.OnCollection(collDiff, stats)
 	}
 
-	// Removed collections (in target only)
-	for _, name := range removed {
-		collDiff, err := d.diffRemovedCollection(ctx, database, name)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: skipping collection %q: %v\n", name, err)
-			cbs.OnCollection(CollectionDiff{Name: name, Error: err.Error()}, stats)
-			continue
+	// Removed collections (in target only) — skip in source→target mode
+	if !d.opts.SourceToTarget {
+		for _, name := range removed {
+			collDiff, err := d.diffRemovedCollection(ctx, database, name)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: skipping collection %q: %v\n", name, err)
+				cbs.OnCollection(CollectionDiff{Name: name, Error: err.Error()}, stats)
+				continue
+			}
+			stats.CollectionsRemoved++
+			stats.DocumentsRemoved += collDiff.Stats.DocumentsRemoved
+			cbs.OnCollection(collDiff, stats)
 		}
-		stats.CollectionsRemoved++
-		stats.DocumentsRemoved += collDiff.Stats.DocumentsRemoved
-		cbs.OnCollection(collDiff, stats)
 	}
 
 	// Matched collections (in both)
@@ -242,26 +249,28 @@ func (d *Differ) diffMatchedCollection(ctx context.Context, database, name strin
 		}
 	}
 
-	// Documents removed (target only)
-	var removedIDs []interface{}
-	for _, id := range targetIDs {
-		key := idKey(id)
-		if _, exists := sourceIDSet[key]; !exists {
-			removedIDs = append(removedIDs, id)
+	// Documents removed (target only) — skip in source→target mode
+	if !d.opts.SourceToTarget {
+		var removedIDs []interface{}
+		for _, id := range targetIDs {
+			key := idKey(id)
+			if _, exists := sourceIDSet[key]; !exists {
+				removedIDs = append(removedIDs, id)
+			}
 		}
-	}
-	if len(removedIDs) > 0 {
-		removedDocs, err := d.target.FetchDocuments(ctx, database, name, removedIDs)
-		if err != nil {
-			return CollectionDiff{}, err
-		}
-		for _, id := range removedIDs {
-			docDiffs = append(docDiffs, DocumentDiff{
-				ID:       id,
-				DiffType: Removed,
-				Target:   removedDocs[id],
-			})
-			stats.DocumentsRemoved++
+		if len(removedIDs) > 0 {
+			removedDocs, err := d.target.FetchDocuments(ctx, database, name, removedIDs)
+			if err != nil {
+				return CollectionDiff{}, err
+			}
+			for _, id := range removedIDs {
+				docDiffs = append(docDiffs, DocumentDiff{
+					ID:       id,
+					DiffType: Removed,
+					Target:   removedDocs[id],
+				})
+				stats.DocumentsRemoved++
+			}
 		}
 	}
 
