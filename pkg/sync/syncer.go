@@ -208,6 +208,44 @@ func (s *Syncer) Apply(ctx context.Context, result *diff.DiffResult) (*SyncResul
 	return sr, nil
 }
 
+// Restore reads a backup file and upserts documents back into the target database.
+func (s *Syncer) Restore(ctx context.Context, database, backupPath string) (*RestoreResult, error) {
+	file, err := os.Open(backupPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open backup file: %w", err)
+	}
+	defer file.Close()
+
+	var backup map[string][]bson.M
+	if err := json.NewDecoder(file).Decode(&backup); err != nil {
+		return nil, fmt.Errorf("failed to parse backup file: %w", err)
+	}
+
+	result := &RestoreResult{}
+	for collName, docs := range backup {
+		// Ensure collection exists
+		_ = s.target.CreateCollection(ctx, database, collName)
+
+		for _, doc := range docs {
+			if err := s.target.UpsertDocument(ctx, database, collName, doc); err != nil {
+				result.Errors = append(result.Errors, fmt.Sprintf("%s: %v", collName, err))
+				continue
+			}
+			result.DocumentsRestored++
+		}
+		result.CollectionsAffected++
+	}
+
+	return result, nil
+}
+
+// RestoreResult summarizes the restore operation.
+type RestoreResult struct {
+	CollectionsAffected int
+	DocumentsRestored   int
+	Errors              []string
+}
+
 func (s *Syncer) applyAddedCollection(ctx context.Context, database string, coll diff.CollectionDiff) error {
 	if err := s.target.CreateCollection(ctx, database, coll.Name); err != nil {
 		return fmt.Errorf("create collection: %w", err)

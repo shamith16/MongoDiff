@@ -158,6 +158,21 @@ func (c *Client) ReplaceDocument(ctx context.Context, database, collection strin
 	return nil
 }
 
+// UpsertDocument replaces a document if it exists, or inserts it if it doesn't.
+func (c *Client) UpsertDocument(ctx context.Context, database, collection string, doc bson.M) error {
+	coll := c.inner.Database(database).Collection(collection)
+	id, ok := doc["_id"]
+	if !ok {
+		return fmt.Errorf("document has no _id field")
+	}
+	opts := options.Replace().SetUpsert(true)
+	_, err := coll.ReplaceOne(ctx, bson.M{"_id": id}, doc, opts)
+	if err != nil {
+		return fmt.Errorf("failed to upsert document in %s.%s: %w", database, collection, err)
+	}
+	return nil
+}
+
 // DeleteDocuments deletes documents by their _id values.
 func (c *Client) DeleteDocuments(ctx context.Context, database, collection string, ids []interface{}) error {
 	if len(ids) == 0 {
