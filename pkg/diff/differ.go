@@ -38,6 +38,14 @@ func New(source, target *mongoclient.Client, opts Options) *Differ {
 // CollectionCallback is called with each collection diff as it completes during streaming.
 type CollectionCallback func(coll CollectionDiff, stats DiffStats)
 
+// StreamCallbacks holds callbacks for streaming diff operations.
+type StreamCallbacks struct {
+	// OnStart is called after collection lists are resolved with the total count.
+	OnStart func(totalCollections int)
+	// OnCollection is called as each collection diff completes.
+	OnCollection CollectionCallback
+}
+
 // Diff performs the comparison and returns a structured result.
 // It does not mutate either database.
 func (d *Differ) Diff(ctx context.Context, database string) (*DiffResult, error) {
@@ -46,9 +54,11 @@ func (d *Differ) Diff(ctx context.Context, database string) (*DiffResult, error)
 		Timestamp: time.Now(),
 	}
 
-	err := d.diffInternal(ctx, database, func(coll CollectionDiff, stats DiffStats) {
-		result.Collections = append(result.Collections, coll)
-		result.Stats = stats
+	err := d.diffInternal(ctx, database, StreamCallbacks{
+		OnCollection: func(coll CollectionDiff, stats DiffStats) {
+			result.Collections = append(result.Collections, coll)
+			result.Stats = stats
+		},
 	})
 	if err != nil {
 		return nil, err
@@ -57,13 +67,12 @@ func (d *Differ) Diff(ctx context.Context, database string) (*DiffResult, error)
 	return result, nil
 }
 
-// DiffStream performs the comparison and calls onCollection for each collection as it completes.
-// The callback receives the collection diff and cumulative stats so far.
-func (d *Differ) DiffStream(ctx context.Context, database string, onCollection CollectionCallback) error {
-	return d.diffInternal(ctx, database, onCollection)
+// DiffStream performs the comparison and calls callbacks as collections are diffed.
+func (d *Differ) DiffStream(ctx context.Context, database string, cbs StreamCallbacks) error {
+	return d.diffInternal(ctx, database, cbs)
 }
 
-func (d *Differ) diffInternal(ctx context.Context, database string, onCollection CollectionCallback) error {
+func (d *Differ) diffInternal(ctx context.Context, database string, cbs StreamCallbacks) error {
 	var stats DiffStats
 
 	// Pass 1: Collection comparison
@@ -82,44 +91,49 @@ func (d *Differ) diffInternal(ctx context.Context, database string, onCollection
 	sourceSet := toSet(sourceColls)
 	targetSet := toSet(targetColls)
 
-	// Added collections (in source only)
 	added := setDiff(sourceSet, targetSet)
+	removed := setDiff(targetSet, sourceSet)
+	matched := setIntersect(sourceSet, targetSet)
 	sort.Strings(added)
+	sort.Strings(removed)
+	sort.Strings(matched)
+
+	if cbs.OnStart != nil {
+		cbs.OnStart(len(added) + len(removed) + len(matched))
+	}
+
+	// Added collections (in source only)
 	for _, name := range added {
 		collDiff, err := d.diffAddedCollection(ctx, database, name)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: skipping collection %q: %v\n", name, err)
-			onCollection(CollectionDiff{Name: name, Error: err.Error()}, stats)
+			cbs.OnCollection(CollectionDiff{Name: name, Error: err.Error()}, stats)
 			continue
 		}
 		stats.CollectionsAdded++
 		stats.DocumentsAdded += collDiff.Stats.DocumentsAdded
-		onCollection(collDiff, stats)
+		cbs.OnCollection(collDiff, stats)
 	}
 
 	// Removed collections (in target only)
-	removed := setDiff(targetSet, sourceSet)
-	sort.Strings(removed)
 	for _, name := range removed {
 		collDiff, err := d.diffRemovedCollection(ctx, database, name)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: skipping collection %q: %v\n", name, err)
-			onCollection(CollectionDiff{Name: name, Error: err.Error()}, stats)
+			cbs.OnCollection(CollectionDiff{Name: name, Error: err.Error()}, stats)
 			continue
 		}
 		stats.CollectionsRemoved++
 		stats.DocumentsRemoved += collDiff.Stats.DocumentsRemoved
-		onCollection(collDiff, stats)
+		cbs.OnCollection(collDiff, stats)
 	}
 
 	// Matched collections (in both)
-	matched := setIntersect(sourceSet, targetSet)
-	sort.Strings(matched)
 	for _, name := range matched {
 		collDiff, err := d.diffMatchedCollection(ctx, database, name)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: skipping collection %q: %v\n", name, err)
-			onCollection(CollectionDiff{Name: name, Error: err.Error()}, stats)
+			cbs.OnCollection(CollectionDiff{Name: name, Error: err.Error()}, stats)
 			continue
 		}
 		stats.CollectionsMatched++
@@ -127,7 +141,7 @@ func (d *Differ) diffInternal(ctx context.Context, database string, onCollection
 		stats.DocumentsRemoved += collDiff.Stats.DocumentsRemoved
 		stats.DocumentsModified += collDiff.Stats.DocumentsModified
 		stats.DocumentsIdentical += collDiff.Stats.DocumentsIdentical
-		onCollection(collDiff, stats)
+		cbs.OnCollection(collDiff, stats)
 	}
 
 	return nil

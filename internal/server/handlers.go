@@ -122,15 +122,26 @@ func (s *Server) handleDiffStream(w http.ResponseWriter, r *http.Request) {
 	}
 
 	differ := diff.New(source, target, opts)
-	err = differ.DiffStream(ctx, req.Database, func(coll diff.CollectionDiff, stats diff.DiffStats) {
-		event := map[string]interface{}{
-			"type":       "collection",
-			"collection": output.CollectionToJSON(coll),
-			"stats":      stats,
-		}
-		data, _ := json.Marshal(event)
-		fmt.Fprintf(w, "data: %s\n\n", data)
-		flusher.Flush()
+	err = differ.DiffStream(ctx, req.Database, diff.StreamCallbacks{
+		OnStart: func(total int) {
+			startEvent := map[string]interface{}{
+				"type":  "start",
+				"total": total,
+			}
+			data, _ := json.Marshal(startEvent)
+			fmt.Fprintf(w, "data: %s\n\n", data)
+			flusher.Flush()
+		},
+		OnCollection: func(coll diff.CollectionDiff, stats diff.DiffStats) {
+			event := map[string]interface{}{
+				"type":       "collection",
+				"collection": output.CollectionToJSON(coll),
+				"stats":      stats,
+			}
+			data, _ := json.Marshal(event)
+			fmt.Fprintf(w, "data: %s\n\n", data)
+			flusher.Flush()
+		},
 	})
 
 	if err != nil {

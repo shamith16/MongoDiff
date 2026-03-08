@@ -1,36 +1,67 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>mongodiff</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root[data-theme="dark"] {
+      --bg: #0d1117; --bg-secondary: #161b22; --bg-tertiary: #1c2128;
+      --border: #30363d; --text: #c9d1d9; --text-muted: #8b949e;
+      --accent: #58a6ff; --input-bg: #0d1117;
+    }
+    :root[data-theme="light"] {
+      --bg: #ffffff; --bg-secondary: #f6f8fa; --bg-tertiary: #eaeef2;
+      --border: #d0d7de; --text: #1f2328; --text-muted: #656d76;
+      --accent: #0969da; --input-bg: #ffffff;
+    }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #0d1117; color: #c9d1d9; line-height: 1.5;
+      background: var(--bg); color: var(--text); line-height: 1.5;
     }
     .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-    h1 { color: #58a6ff; margin-bottom: 4px; font-size: 1.5rem; }
-    h1 span { color: #8b949e; font-weight: normal; font-size: 0.9rem; }
-    h2 { color: #c9d1d9; font-size: 1.1rem; margin: 20px 0 10px; }
+
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    h1 { color: var(--accent); font-size: 1.5rem; }
+    h1 span { color: var(--text-muted); font-weight: normal; font-size: 0.9rem; }
+    h2 { color: var(--text); font-size: 1.1rem; margin: 20px 0 10px; }
+
+    .theme-toggle {
+      background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px;
+      color: var(--text-muted); cursor: pointer; padding: 4px 10px; font-size: 0.85rem;
+    }
+    .theme-toggle:hover { color: var(--text); border-color: var(--accent); }
 
     .form-grid {
       display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
-      background: #161b22; padding: 20px; border-radius: 8px;
-      border: 1px solid #30363d; margin: 16px 0;
+      background: var(--bg-secondary); padding: 20px; border-radius: 8px;
+      border: 1px solid var(--border); margin: 16px 0;
     }
     .form-row { grid-column: 1 / -1; }
-    label { display: block; font-size: 0.85rem; color: #8b949e; margin-bottom: 4px; }
+    label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 4px; }
     input, select {
-      width: 100%; padding: 8px 12px; background: #0d1117; border: 1px solid #30363d;
-      border-radius: 6px; color: #c9d1d9; font-size: 0.9rem;
+      width: 100%; padding: 8px 12px; background: var(--input-bg); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text); font-size: 0.9rem;
     }
-    input:focus, select:focus { outline: none; border-color: #58a6ff; }
+    input:focus, select:focus { outline: none; border-color: var(--accent); }
+
+    .uri-row { display: flex; gap: 8px; align-items: flex-end; }
+    .uri-row input { flex: 1; }
+    .btn-test {
+      padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border);
+      background: var(--bg-secondary); color: var(--text-muted); cursor: pointer;
+      font-size: 0.8rem; white-space: nowrap; height: 37px;
+    }
+    .btn-test:hover { color: var(--text); border-color: var(--accent); }
+    .btn-test.success { border-color: #3fb950; color: #3fb950; }
+    .btn-test.fail { border-color: #f85149; color: #f85149; }
 
     .btn-group { display: flex; gap: 8px; margin-top: 8px; }
     button {
-      padding: 8px 16px; border-radius: 6px; border: 1px solid #30363d;
+      padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border);
       cursor: pointer; font-size: 0.9rem; font-weight: 500;
     }
     .btn-primary { background: #238636; color: #fff; border-color: #238636; }
@@ -39,19 +70,19 @@
     .btn-warning { background: #9e6a03; color: #fff; border-color: #9e6a03; }
     .btn-warning:hover { background: #bb8009; }
     .btn-warning:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-secondary { background: #21262d; color: #c9d1d9; }
-    .btn-secondary:hover { background: #30363d; }
+    .btn-secondary { background: var(--bg-tertiary); color: var(--text); }
+    .btn-secondary:hover { background: var(--border); }
     .btn-danger { background: #da3633; color: #fff; border-color: #da3633; }
     .btn-danger:hover { background: #f85149; }
 
     .status { padding: 8px 12px; border-radius: 6px; margin: 12px 0; font-size: 0.85rem; }
-    .status-info { background: #0c2d6b; border: 1px solid #1f6feb; }
-    .status-error { background: #490202; border: 1px solid #f85149; }
-    .status-success { background: #0b2e13; border: 1px solid #238636; }
+    .status-info { background: #0c2d6b; border: 1px solid #1f6feb; color: #c9d1d9; }
+    .status-error { background: #490202; border: 1px solid #f85149; color: #f85149; }
+    .status-success { background: #0b2e13; border: 1px solid #238636; color: #3fb950; }
 
     .results { margin-top: 16px; }
     .collection {
-      background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+      background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px;
       margin-bottom: 8px; overflow: hidden;
     }
     .collection-header {
@@ -59,14 +90,14 @@
       justify-content: space-between; align-items: center;
       user-select: none;
     }
-    .collection-header:hover { background: #1c2128; }
+    .collection-header:hover { background: var(--bg-tertiary); }
     .collection-body { padding: 0 16px 12px; display: none; }
     .collection-body.open { display: block; }
 
     .coll-added .collection-header { border-left: 3px solid #3fb950; }
     .coll-removed .collection-header { border-left: 3px solid #f85149; }
     .coll-modified .collection-header { border-left: 3px solid #d29922; }
-    .coll-identical .collection-header { border-left: 3px solid #30363d; }
+    .coll-identical .collection-header { border-left: 3px solid var(--border); }
     .coll-error .collection-header { border-left: 3px solid #f85149; }
 
     .badge {
@@ -76,11 +107,11 @@
     .badge-added { background: #0b2e13; color: #3fb950; }
     .badge-removed { background: #490202; color: #f85149; }
     .badge-modified { background: #3d2e00; color: #d29922; }
-    .badge-identical { background: #21262d; color: #8b949e; }
+    .badge-identical { background: var(--bg-tertiary); color: var(--text-muted); }
     .badge-error { background: #490202; color: #f85149; }
 
-    .doc-diff { margin: 8px 0; padding: 8px 12px; background: #0d1117; border-radius: 6px; font-family: monospace; font-size: 0.85rem; }
-    .doc-id { color: #8b949e; margin-bottom: 4px; }
+    .doc-diff { margin: 8px 0; padding: 8px 12px; background: var(--bg); border-radius: 6px; font-family: monospace; font-size: 0.85rem; }
+    .doc-id { color: var(--text-muted); margin-bottom: 4px; }
     .field-added { color: #3fb950; }
     .field-removed { color: #f85149; }
     .field-modified-old { color: #f85149; }
@@ -88,9 +119,9 @@
     .field-type-change { color: #d29922; }
 
     .summary-bar {
-      display: flex; gap: 16px; padding: 12px 16px; background: #161b22;
-      border: 1px solid #30363d; border-radius: 8px; margin: 12px 0;
-      font-size: 0.9rem; flex-wrap: wrap;
+      display: flex; gap: 16px; padding: 12px 16px; background: var(--bg-secondary);
+      border: 1px solid var(--border); border-radius: 8px; margin: 12px 0;
+      font-size: 0.9rem; flex-wrap: wrap; align-items: center;
     }
     .summary-stat { display: flex; align-items: center; gap: 4px; }
     .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
@@ -99,35 +130,49 @@
     .dot-yellow { background: #d29922; }
     .dot-gray { background: #484f58; }
 
-    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #30363d; border-top-color: #58a6ff; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 6px; }
+    .progress-text { color: var(--text-muted); font-size: 0.85rem; margin-left: auto; }
+
+    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 6px; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
     .sync-plan { margin: 12px 0; }
-    .sync-action { padding: 6px 12px; font-family: monospace; font-size: 0.85rem; border-left: 2px solid #30363d; margin: 2px 0; }
+    .sync-action { padding: 6px 12px; font-family: monospace; font-size: 0.85rem; border-left: 2px solid var(--border); margin: 2px 0; }
     .sync-action-insert, .sync-action-create_collection { border-left-color: #3fb950; color: #3fb950; }
     .sync-action-delete, .sync-action-drop_collection { border-left-color: #f85149; color: #f85149; }
     .sync-action-replace { border-left-color: #d29922; color: #d29922; }
 
     .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 100; }
-    .modal { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 24px; max-width: 500px; width: 90%; }
+    .modal { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 12px; padding: 24px; max-width: 500px; width: 90%; }
     .modal h3 { margin-bottom: 12px; color: #d29922; }
-    .modal p { margin-bottom: 16px; color: #8b949e; }
+    .modal p { margin-bottom: 16px; color: var(--text-muted); }
     .modal .btn-group { justify-content: flex-end; }
+
+    .toolbar { display: flex; gap: 8px; margin: 8px 0; }
+
     .hidden { display: none !important; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>mongodiff <span>— diff &amp; sync MongoDB databases</span></h1>
+    <div class="header">
+      <h1>mongodiff <span>— diff &amp; sync MongoDB databases</span></h1>
+      <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">Dark / Light</button>
+    </div>
 
     <div class="form-grid">
       <div>
         <label>Source URI</label>
-        <input type="text" id="source" placeholder="mongodb://localhost:27017">
+        <div class="uri-row">
+          <input type="text" id="source" placeholder="mongodb://localhost:27017">
+          <button class="btn-test" id="btnTestSource" onclick="testConnection('source')">Test</button>
+        </div>
       </div>
       <div>
         <label>Target URI</label>
-        <input type="text" id="target" placeholder="mongodb://staging:27017">
+        <div class="uri-row">
+          <input type="text" id="target" placeholder="mongodb://staging:27017">
+          <button class="btn-test" id="btnTestTarget" onclick="testConnection('target')">Test</button>
+        </div>
       </div>
       <div>
         <label>Database</label>
@@ -152,6 +197,7 @@
       <div class="form-row btn-group">
         <button class="btn-primary" id="btnDiff" onclick="runDiff()">Run Diff</button>
         <button class="btn-warning" id="btnSync" onclick="runSyncDryRun()" disabled>Sync (Dry Run)</button>
+        <button class="btn-secondary hidden" id="btnDownload" onclick="downloadJSON()">Download JSON</button>
       </div>
     </div>
 
@@ -174,6 +220,51 @@
 
   <script>
     let lastDiffData = null;
+
+    // Theme
+    function toggleTheme() {
+      const html = document.documentElement;
+      const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('mongodiff-theme', next);
+    }
+    (function() {
+      const saved = localStorage.getItem('mongodiff-theme');
+      if (saved) document.documentElement.setAttribute('data-theme', saved);
+    })();
+
+    // Connection test
+    async function testConnection(field) {
+      const uri = document.getElementById(field).value.trim();
+      if (!uri) return;
+
+      const btn = document.getElementById(field === 'source' ? 'btnTestSource' : 'btnTestTarget');
+      btn.textContent = '...';
+      btn.className = 'btn-test';
+
+      try {
+        const timeout = parseInt(document.getElementById('timeout').value) || 10;
+        const res = await fetch('/api/test-connection', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uri, timeout })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          btn.textContent = 'OK (' + data.databases.length + ' dbs)';
+          btn.className = 'btn-test success';
+        } else {
+          btn.textContent = 'Fail';
+          btn.className = 'btn-test fail';
+          btn.title = data.error;
+        }
+      } catch (err) {
+        btn.textContent = 'Fail';
+        btn.className = 'btn-test fail';
+        btn.title = err.message;
+      }
+    }
 
     function getFormData() {
       const data = {
@@ -218,6 +309,18 @@
       return String(str);
     }
 
+    // Download diff as JSON
+    function downloadJSON() {
+      if (!lastDiffData) return;
+      const blob = new Blob([JSON.stringify(lastDiffData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'mongodiff-' + (lastDiffData.database || 'result') + '.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
     async function runDiff() {
       const data = getFormData();
       if (!data.source || !data.target || !data.database) {
@@ -225,13 +328,14 @@
         return;
       }
 
-      showStatusLoading('Running diff...');
+      showStatusLoading('Connecting...');
       document.getElementById('btnDiff').disabled = true;
       document.getElementById('results').textContent = '';
       document.getElementById('summaryBar').classList.add('hidden');
       document.getElementById('syncPlan').classList.add('hidden');
       document.getElementById('btnSync').disabled = true;
-      lastDiffData = { collections: [], stats: {} };
+      document.getElementById('btnDownload').classList.add('hidden');
+      lastDiffData = { collections: [], stats: {}, database: data.database };
 
       try {
         const res = await fetch('/api/diff/stream', {
@@ -250,8 +354,9 @@
         const decoder = new TextDecoder();
         let buffer = '';
         let collCount = 0;
+        let totalColls = 0;
+        let startTime = Date.now();
 
-        // Show summary bar immediately
         const summaryEl = document.getElementById('summaryBar');
         summaryEl.className = 'summary-bar';
         summaryEl.textContent = '';
@@ -263,26 +368,30 @@
 
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n');
-          buffer = lines.pop(); // keep incomplete line
+          buffer = lines.pop();
 
           for (const line of lines) {
             if (!line.startsWith('data: ')) continue;
             const event = JSON.parse(line.slice(6));
 
-            if (event.type === 'collection') {
+            if (event.type === 'start') {
+              totalColls = event.total;
+              showStatusLoading('Diffing 0/' + totalColls + ' collections...');
+            } else if (event.type === 'collection') {
               collCount++;
               const coll = event.collection;
               lastDiffData.collections.push(coll);
               lastDiffData.stats = event.stats;
 
-              // Update status with progress
-              showStatusLoading('Diffing... ' + collCount + ' collections processed');
+              const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+              const rate = (collCount / (Date.now() - startTime) * 1000).toFixed(1);
+              const progress = totalColls
+                ? collCount + '/' + totalColls + ' collections'
+                : collCount + ' collections processed';
+              showStatusLoading('Diffing ' + progress + ' (' + elapsed + 's, ' + rate + ' colls/s)');
 
-              // Append collection to results live
               renderCollectionDOM(resultsEl, coll);
-
-              // Update summary bar
-              updateSummaryBar(summaryEl, event.stats);
+              updateSummaryBar(summaryEl, event.stats, collCount, totalColls);
             } else if (event.type === 'error') {
               showStatus(event.error, 'error');
               return;
@@ -293,8 +402,10 @@
           }
         }
 
-        hideStatus();
+        const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
+        showStatus('Done in ' + totalTime + 's — ' + collCount + ' collections compared', 'success');
         document.getElementById('btnSync').disabled = false;
+        document.getElementById('btnDownload').classList.remove('hidden');
       } catch (err) {
         showStatus('Request failed: ' + err.message, 'error');
       } finally {
@@ -302,7 +413,7 @@
       }
     }
 
-    function updateSummaryBar(summaryEl, stats) {
+    function updateSummaryBar(summaryEl, stats, current, total) {
       summaryEl.textContent = '';
       const statItems = [
         { count: stats.CollectionsAdded, label: 'added', dotClass: 'dot-green' },
@@ -323,6 +434,13 @@
           span.appendChild(document.createTextNode(item.count + ' ' + item.label));
           summaryEl.appendChild(span);
         }
+      }
+
+      if (total) {
+        const prog = document.createElement('span');
+        prog.className = 'progress-text';
+        prog.textContent = current + '/' + total;
+        summaryEl.appendChild(prog);
       }
     }
 
@@ -349,7 +467,7 @@
       header.appendChild(nameSpan);
 
       const summarySpan = document.createElement('span');
-      summarySpan.style.color = '#8b949e';
+      summarySpan.style.color = 'var(--text-muted)';
       summarySpan.style.fontSize = '0.85rem';
       summarySpan.textContent = collSummary(coll);
       header.appendChild(summarySpan);
@@ -384,7 +502,7 @@
     function renderDocumentsDOM(parent, docs) {
       if (!docs || docs.length === 0) {
         const note = document.createElement('div');
-        note.style.color = '#8b949e';
+        note.style.color = 'var(--text-muted)';
         note.textContent = 'No document details';
         parent.appendChild(note);
         return;
