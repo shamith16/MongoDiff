@@ -176,7 +176,9 @@
       </div>
       <div>
         <label>Database</label>
-        <input type="text" id="database" placeholder="myapp">
+        <select id="database" disabled>
+          <option value="">Test both connections first</option>
+        </select>
       </div>
       <div>
         <label>Timeout (seconds)</label>
@@ -220,6 +222,8 @@
 
   <script>
     let lastDiffData = null;
+    let sourceDatabases = null;
+    let targetDatabases = null;
 
     // Theme
     function toggleTheme() {
@@ -242,6 +246,11 @@
       btn.textContent = '...';
       btn.className = 'btn-test';
 
+      // Reset databases for this side
+      if (field === 'source') sourceDatabases = null;
+      else targetDatabases = null;
+      updateDatabaseDropdown();
+
       try {
         const timeout = parseInt(document.getElementById('timeout').value) || 10;
         const res = await fetch('/api/test-connection', {
@@ -254,6 +263,9 @@
         if (data.success) {
           btn.textContent = 'OK (' + data.databases.length + ' dbs)';
           btn.className = 'btn-test success';
+          if (field === 'source') sourceDatabases = data.databases;
+          else targetDatabases = data.databases;
+          updateDatabaseDropdown();
         } else {
           btn.textContent = 'Fail';
           btn.className = 'btn-test fail';
@@ -263,6 +275,40 @@
         btn.textContent = 'Fail';
         btn.className = 'btn-test fail';
         btn.title = err.message;
+      }
+    }
+
+    function updateDatabaseDropdown() {
+      const select = document.getElementById('database');
+      const prev = select.value;
+
+      // Clear options
+      while (select.options.length) select.remove(0);
+
+      if (!sourceDatabases || !targetDatabases) {
+        select.add(new Option('Test both connections first', ''));
+        select.disabled = true;
+        return;
+      }
+
+      const sourceSet = new Set(sourceDatabases);
+      const common = targetDatabases.filter(db => sourceSet.has(db)).sort();
+
+      if (common.length === 0) {
+        select.add(new Option('No common databases found', ''));
+        select.disabled = true;
+        return;
+      }
+
+      select.add(new Option('Select a database...', ''));
+      for (const db of common) {
+        select.add(new Option(db, db));
+      }
+      select.disabled = false;
+
+      // Restore previous selection if still valid
+      if (prev && common.includes(prev)) {
+        select.value = prev;
       }
     }
 
