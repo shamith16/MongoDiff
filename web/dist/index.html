@@ -1456,7 +1456,7 @@ print("Database: " + DATABASE);
 print("Operations: " + OPERATIONS.length + " (${countSummary})");
 print("Mode: " + (DRY_RUN ? "DRY RUN" : "APPLY"));
 
-const conn = connect(CONNECTION_STRING + "/" + DATABASE);
+const conn = connect(CONNECTION_STRING);
 const db = conn.getSiblingDB(DATABASE);
 
 const errors = preflight(db);
