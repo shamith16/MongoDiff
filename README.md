@@ -93,6 +93,30 @@ mongodiff serve --port 3000
 
 Open `http://localhost:8080` for a browser-based UI with connection testing, live-streaming diff results, sync controls, and dark/light theme.
 
+#### Export Migration Script
+
+From the Web UI, click **Download Script** to generate a self-contained `mongosh` migration script. The script bundles your selected operations into a single `.js` file that can be run against any MongoDB target — no mongodiff installation needed.
+
+**How to use:**
+
+1. Run a diff in the Web UI and select the operations you want to apply
+2. Click **Download Script** — a `.js` file downloads
+3. Open the file and replace `CONNECTION_STRING` with your target MongoDB URI
+4. Run in dry-run mode first (default): `mongosh --file mongodiff-apply-mydb.js`
+5. Set `DRY_RUN = false` in the file and run again to apply
+
+**Safety guarantees:**
+
+- **Dry run by default** — `DRY_RUN = true` out of the box, so the script validates without writing anything until you explicitly opt in
+- **Pre-flight validation** — before any writes, the script checks that every document targeted for modify/delete actually exists in the target database
+- **Drift detection** — compares the target snapshot (captured at diff time) against the live document; if any field has changed since the diff was taken, the script aborts with a detailed report
+- **Skip and continue** — if an individual operation fails during apply, the script logs the error and continues with the remaining operations, then reports all failures in the summary
+- **ObjectId handling** — automatically converts 24-character hex string IDs back to native `ObjectId` types for correct MongoDB queries
+
+#### Copy Document IDs
+
+Click **Copy IDs** to copy the `_id` values of all selected operations to your clipboard, grouped by collection. Useful for quick lookups or sharing with teammates.
+
 ### Docker
 
 ```bash
