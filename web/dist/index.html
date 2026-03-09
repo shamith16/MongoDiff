@@ -825,6 +825,9 @@ function appendOpRow(op) {
   const wrapper = document.createElement('div');
   wrapper.setAttribute('data-op-idx', op.idx);
   wrapper.setAttribute('data-collection', op.collection);
+  if (activeFilter !== 'all' && op.collection !== activeFilter) {
+    wrapper.classList.add('hidden');
+  }
 
   // Op row
   const row = document.createElement('div');
