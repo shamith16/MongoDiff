@@ -8,741 +8,1231 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     :root[data-theme="dark"] {
-      --bg: #0d1117; --bg-secondary: #161b22; --bg-tertiary: #1c2128;
-      --border: #30363d; --text: #c9d1d9; --text-muted: #8b949e;
-      --accent: #58a6ff; --input-bg: #0d1117;
+      --bg: #0f1117; --bg-secondary: #161922; --bg-tertiary: #1c1f2b;
+      --bg-card: #1a1d28; --bg-hover: #22253a;
+      --border: #2a2d3a; --border-light: #353848;
+      --text: #e1e4ed; --text-muted: #8b8fa7; --text-dim: #5c5f73;
+      --accent: #6c8cff; --accent-hover: #8aa4ff;
+      --green: #4ade80; --green-bg: rgba(74,222,128,0.12); --green-border: rgba(74,222,128,0.25);
+      --yellow: #facc15; --yellow-bg: rgba(250,204,21,0.12); --yellow-border: rgba(250,204,21,0.25);
+      --red: #f87171; --red-bg: rgba(248,113,113,0.12); --red-border: rgba(248,113,113,0.25);
+      --input-bg: #12141e; --nav-bg: #0d0f16;
+      --scrollbar-bg: #1a1d28; --scrollbar-thumb: #353848;
     }
     :root[data-theme="light"] {
-      --bg: #ffffff; --bg-secondary: #f6f8fa; --bg-tertiary: #eaeef2;
-      --border: #d0d7de; --text: #1f2328; --text-muted: #656d76;
-      --accent: #0969da; --input-bg: #ffffff;
+      --bg: #f5f6fa; --bg-secondary: #ffffff; --bg-tertiary: #eef0f5;
+      --bg-card: #ffffff; --bg-hover: #f0f2f7;
+      --border: #d8dbe5; --border-light: #e5e7ef;
+      --text: #1a1c2e; --text-muted: #6b6f85; --text-dim: #999cb0;
+      --accent: #4a6cf7; --accent-hover: #3855d6;
+      --green: #16a34a; --green-bg: rgba(22,163,74,0.08); --green-border: rgba(22,163,74,0.2);
+      --yellow: #ca8a04; --yellow-bg: rgba(202,138,4,0.08); --yellow-border: rgba(202,138,4,0.2);
+      --red: #dc2626; --red-bg: rgba(220,38,38,0.08); --red-border: rgba(220,38,38,0.2);
+      --input-bg: #f5f6fa; --nav-bg: #ffffff;
+      --scrollbar-bg: #f0f2f7; --scrollbar-thumb: #d8dbe5;
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif;
       background: var(--bg); color: var(--text); line-height: 1.5;
+      height: 100vh; overflow: hidden;
     }
-    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
 
-    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-    h1 { color: var(--accent); font-size: 1.5rem; }
-    h1 span { color: var(--text-muted); font-weight: normal; font-size: 0.9rem; }
-    h2 { color: var(--text); font-size: 1.1rem; margin: 20px 0 10px; }
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--scrollbar-bg); }
+    ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
 
-    .theme-toggle {
-      background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px;
-      color: var(--text-muted); cursor: pointer; padding: 4px 10px; font-size: 0.85rem;
+    /* ─── Top Navigation ─── */
+    .nav {
+      height: 48px; background: var(--nav-bg); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; padding: 0 16px; gap: 24px; flex-shrink: 0;
     }
-    .theme-toggle:hover { color: var(--text); border-color: var(--accent); }
-
-    .form-grid {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
-      background: var(--bg-secondary); padding: 20px; border-radius: 8px;
-      border: 1px solid var(--border); margin: 16px 0;
+    .nav-logo {
+      font-weight: 700; font-size: 1rem; color: var(--accent);
+      display: flex; align-items: center; gap: 6px;
     }
-    .form-row { grid-column: 1 / -1; }
-    label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 4px; }
-    input, select {
-      width: 100%; padding: 8px 12px; background: var(--input-bg); border: 1px solid var(--border);
-      border-radius: 6px; color: var(--text); font-size: 0.9rem;
+    .nav-logo svg { width: 18px; height: 18px; }
+    .nav-tabs { display: flex; gap: 2px; margin-left: 12px; }
+    .nav-tab {
+      padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 500;
+      cursor: pointer; color: var(--text-muted); background: none; border: none;
+      transition: all 0.15s;
     }
-    input:focus, select:focus { outline: none; border-color: var(--accent); }
+    .nav-tab:hover { color: var(--text); background: var(--bg-hover); }
+    .nav-tab.active { color: var(--text); background: var(--bg-tertiary); }
+    .nav-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+    .nav-version { font-size: 0.75rem; color: var(--text-dim); }
+    .theme-btn {
+      background: none; border: 1px solid var(--border); border-radius: 6px;
+      color: var(--text-muted); cursor: pointer; padding: 4px 8px; font-size: 0.75rem;
+    }
+    .theme-btn:hover { color: var(--text); border-color: var(--accent); }
 
-    .uri-row { display: flex; gap: 8px; align-items: flex-end; }
-    .uri-row input { flex: 1; }
+    /* ─── Pages ─── */
+    .page { display: none; height: calc(100vh - 48px); }
+    .page.active { display: flex; flex-direction: column; }
+
+    /* ─── Connect Page ─── */
+    .connect-page.active {
+      display: flex; align-items: center; justify-content: center; padding: 40px;
+    }
+    .connect-card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 32px; width: 100%; max-width: 640px;
+    }
+    .connect-card h2 { font-size: 1.1rem; margin-bottom: 20px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label {
+      display: block; font-size: 0.78rem; color: var(--text-muted);
+      margin-bottom: 5px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .form-group input, .form-group select {
+      width: 100%; padding: 9px 12px; background: var(--input-bg);
+      border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text); font-size: 0.88rem; transition: border-color 0.15s;
+    }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--accent); }
+    .form-group select:disabled { opacity: 0.6; }
+
+    .uri-field { display: flex; gap: 8px; }
+    .uri-field input { flex: 1; }
     .btn-test {
-      padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border);
-      background: var(--bg-secondary); color: var(--text-muted); cursor: pointer;
-      font-size: 0.8rem; white-space: nowrap; height: 37px;
+      padding: 9px 14px; border-radius: 8px; border: 1px solid var(--border);
+      background: var(--bg-tertiary); color: var(--text-muted); cursor: pointer;
+      font-size: 0.78rem; white-space: nowrap; font-weight: 500; transition: all 0.15s;
     }
     .btn-test:hover { color: var(--text); border-color: var(--accent); }
-    .btn-test.success { border-color: #3fb950; color: #3fb950; }
-    .btn-test.fail { border-color: #f85149; color: #f85149; }
+    .btn-test.success { border-color: var(--green); color: var(--green); }
+    .btn-test.fail { border-color: var(--red); color: var(--red); }
 
-    .btn-group { display: flex; gap: 8px; margin-top: 8px; }
-    button {
-      padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border);
-      cursor: pointer; font-size: 0.9rem; font-weight: 500;
+    .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+    .checkbox-row {
+      display: flex; align-items: center; gap: 8px; margin: 16px 0;
     }
-    .btn-primary { background: #238636; color: #fff; border-color: #238636; }
-    .btn-primary:hover { background: #2ea043; }
-    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-warning { background: #9e6a03; color: #fff; border-color: #9e6a03; }
-    .btn-warning:hover { background: #bb8009; }
-    .btn-warning:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-secondary { background: var(--bg-tertiary); color: var(--text); }
-    .btn-secondary:hover { background: var(--border); }
-    .btn-danger { background: #da3633; color: #fff; border-color: #da3633; }
-    .btn-danger:hover { background: #f85149; }
+    .checkbox-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); }
+    .checkbox-row label { font-size: 0.85rem; cursor: pointer; margin: 0; text-transform: none; letter-spacing: 0; }
+    .checkbox-hint { color: var(--text-dim); font-size: 0.78rem; }
 
-    .status { padding: 8px 12px; border-radius: 6px; margin: 12px 0; font-size: 0.85rem; }
-    .status-info { background: #0c2d6b; border: 1px solid #1f6feb; color: #c9d1d9; }
-    .status-error { background: #490202; border: 1px solid #f85149; color: #f85149; }
-    .status-success { background: #0b2e13; border: 1px solid #238636; color: #3fb950; }
-
-    .results { margin-top: 16px; }
-    .collection {
-      background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px;
-      margin-bottom: 8px; overflow: hidden;
+    .connect-actions { display: flex; gap: 8px; margin-top: 20px; }
+    .btn {
+      padding: 9px 20px; border-radius: 8px; border: none; cursor: pointer;
+      font-size: 0.88rem; font-weight: 600; transition: all 0.15s;
     }
-    .collection-header {
-      padding: 10px 16px; cursor: pointer; display: flex;
-      justify-content: space-between; align-items: center;
-      user-select: none;
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+    .btn-sync { background: var(--green); color: #111; }
+    .btn-sync:hover:not(:disabled) { filter: brightness(1.1); }
+    .btn-secondary { background: var(--bg-tertiary); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: var(--bg-hover); }
+    .btn-danger { background: var(--red); color: #fff; }
+    .btn-danger:hover { filter: brightness(1.1); }
+
+    /* ─── Diff Page ─── */
+    .diff-page.active { display: flex; flex-direction: row; }
+
+    /* Sidebar */
+    .sidebar {
+      width: 260px; min-width: 260px; background: var(--bg-secondary);
+      border-right: 1px solid var(--border); display: flex; flex-direction: column;
+      overflow: hidden;
     }
-    .collection-header:hover { background: var(--bg-tertiary); }
-    .collection-body { padding: 0 16px 12px; display: none; }
-    .collection-body.open { display: block; }
-
-    .coll-added .collection-header { border-left: 3px solid #3fb950; }
-    .coll-removed .collection-header { border-left: 3px solid #f85149; }
-    .coll-modified .collection-header { border-left: 3px solid #d29922; }
-    .coll-identical .collection-header { border-left: 3px solid var(--border); }
-    .coll-error .collection-header { border-left: 3px solid #f85149; }
-
-    .badge {
-      font-size: 0.75rem; padding: 2px 8px; border-radius: 12px;
-      font-weight: 500;
+    .sidebar-header {
+      padding: 14px 16px; border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
     }
-    .badge-added { background: #0b2e13; color: #3fb950; }
-    .badge-removed { background: #490202; color: #f85149; }
-    .badge-modified { background: #3d2e00; color: #d29922; }
-    .badge-identical { background: var(--bg-tertiary); color: var(--text-muted); }
-    .badge-error { background: #490202; color: #f85149; }
-
-    .doc-diff { margin: 8px 0; padding: 8px 12px; background: var(--bg); border-radius: 6px; font-family: monospace; font-size: 0.85rem; }
-    .doc-id { color: var(--text-muted); margin-bottom: 4px; }
-    .field-added { color: #3fb950; }
-    .field-removed { color: #f85149; }
-    .field-modified-old { color: #f85149; }
-    .field-modified-new { color: #3fb950; }
-    .field-type-change { color: #d29922; }
-
-    .summary-bar {
-      display: flex; gap: 16px; padding: 12px 16px; background: var(--bg-secondary);
-      border: 1px solid var(--border); border-radius: 8px; margin: 12px 0;
-      font-size: 0.9rem; flex-wrap: wrap; align-items: center;
+    .sidebar-title {
+      font-size: 0.72rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 1px; color: var(--text-dim);
     }
-    .summary-stat { display: flex; align-items: center; gap: 4px; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-    .dot-green { background: #3fb950; }
-    .dot-red { background: #f85149; }
-    .dot-yellow { background: #d29922; }
-    .dot-gray { background: #484f58; }
+    .sidebar-count { font-size: 0.75rem; color: var(--text-muted); }
+    .sidebar-list {
+      flex: 1; overflow-y: auto; padding: 4px 0;
+    }
+    .sidebar-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 16px; cursor: pointer; font-size: 0.84rem; color: var(--text-muted);
+      border-left: 3px solid transparent; transition: all 0.1s;
+    }
+    .sidebar-item:hover { background: var(--bg-hover); color: var(--text); }
+    .sidebar-item.active { background: var(--bg-hover); color: var(--text); border-left-color: var(--accent); }
+    .sidebar-item-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sidebar-badges { display: flex; gap: 4px; margin-left: 8px; flex-shrink: 0; }
+    .sidebar-badge {
+      font-size: 0.68rem; padding: 1px 6px; border-radius: 10px; font-weight: 600;
+      min-width: 18px; text-align: center;
+    }
+    .sidebar-badge-insert { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+    .sidebar-badge-modify { background: var(--yellow-bg); color: var(--yellow); border: 1px solid var(--yellow-border); }
+    .sidebar-badge-delete { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+    .sidebar-badge-total { background: var(--bg-tertiary); color: var(--text-muted); border: 1px solid var(--border); }
 
-    .progress-text { color: var(--text-muted); font-size: 0.85rem; margin-left: auto; }
+    .sidebar-status {
+      padding: 12px 16px; border-top: 1px solid var(--border);
+      font-size: 0.78rem; color: var(--text-dim);
+    }
+    .sidebar-progress-bar {
+      width: 100%; height: 3px; background: var(--bg-tertiary);
+      border-radius: 2px; margin-top: 6px; overflow: hidden;
+    }
+    .sidebar-progress-fill {
+      height: 100%; background: var(--accent); border-radius: 2px;
+      transition: width 0.3s;
+    }
 
-    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 6px; }
+    /* Main Content */
+    .main-content {
+      flex: 1; display: flex; flex-direction: column; overflow: hidden;
+    }
+    .content-header {
+      padding: 14px 20px; border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+      background: var(--bg-secondary); flex-shrink: 0;
+    }
+    .content-header-left h2 { font-size: 1rem; font-weight: 600; }
+    .content-header-left .db-name { color: var(--text-muted); font-weight: 400; font-size: 0.85rem; margin-left: 8px; }
+    .content-header-left .op-count { font-size: 0.78rem; color: var(--text-dim); margin-top: 2px; }
+    .content-header-right { display: flex; align-items: center; gap: 10px; }
+
+    .selection-counter { font-size: 0.82rem; color: var(--text-muted); }
+    .btn-sm {
+      padding: 6px 14px; border-radius: 6px; font-size: 0.8rem; font-weight: 600;
+      cursor: pointer; border: none; transition: all 0.15s;
+    }
+
+    /* Operations list */
+    .operations-area {
+      flex: 1; overflow-y: auto; padding: 0;
+    }
+    .collection-group {
+      border-bottom: 1px solid var(--border);
+    }
+    .collection-group-header {
+      padding: 10px 20px; background: var(--bg-tertiary);
+      font-size: 0.78rem; font-weight: 600; color: var(--text-dim);
+      text-transform: uppercase; letter-spacing: 0.5px;
+      display: flex; align-items: center; gap: 8px;
+      position: sticky; top: 0; z-index: 5;
+    }
+    .collection-group-header .coll-badge {
+      font-size: 0.68rem; padding: 1px 6px; border-radius: 8px;
+      background: var(--bg-card); color: var(--text-muted); border: 1px solid var(--border);
+    }
+
+    .op-row {
+      display: flex; align-items: center; padding: 10px 20px; gap: 12px;
+      border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s;
+    }
+    .op-row:hover { background: var(--bg-hover); }
+    .op-row.expanded { background: var(--bg-tertiary); }
+
+    .op-checkbox { flex-shrink: 0; }
+    .op-checkbox input {
+      width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer;
+    }
+
+    .op-badge {
+      font-size: 0.72rem; padding: 3px 10px; border-radius: 4px;
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+      flex-shrink: 0; min-width: 62px; text-align: center;
+    }
+    .op-badge-insert { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+    .op-badge-modify { background: var(--yellow-bg); color: var(--yellow); border: 1px solid var(--yellow-border); }
+    .op-badge-delete { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+
+    .op-id {
+      flex: 1; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.82rem;
+      color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .op-collection {
+      font-size: 0.75rem; color: var(--text-dim); flex-shrink: 0;
+    }
+    .op-toggle {
+      width: 22px; height: 22px; border-radius: 4px; background: var(--bg-tertiary);
+      border: 1px solid var(--border); color: var(--text-muted); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: 0.8rem;
+      flex-shrink: 0; transition: all 0.15s;
+    }
+    .op-toggle:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Expanded Detail */
+    .op-detail {
+      display: none; background: var(--bg-card); border-bottom: 1px solid var(--border);
+      padding: 0 20px 16px 58px;
+    }
+    .op-detail.open { display: block; }
+
+    /* For insert/delete: show full document */
+    .doc-preview {
+      font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.8rem;
+      padding: 12px 16px; background: var(--bg); border-radius: 8px;
+      border: 1px solid var(--border); max-height: 300px; overflow-y: auto;
+      white-space: pre-wrap; color: var(--text-muted); line-height: 1.6;
+    }
+
+    /* For modify: side-by-side table */
+    .diff-table {
+      width: 100%; border-collapse: collapse; font-size: 0.82rem;
+      margin-top: 4px;
+    }
+    .diff-table th {
+      text-align: left; padding: 8px 12px; font-weight: 600; font-size: 0.75rem;
+      text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim);
+      border-bottom: 2px solid var(--border); background: var(--bg-tertiary);
+    }
+    .diff-table td {
+      padding: 7px 12px; border-bottom: 1px solid var(--border);
+      font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.8rem;
+      vertical-align: top; word-break: break-all;
+    }
+    .diff-table tr:last-child td { border-bottom: none; }
+    .diff-table .col-indicator { width: 24px; text-align: center; }
+    .diff-table .col-field { width: 25%; color: var(--text-muted); }
+    .diff-table .col-local { width: 37%; }
+    .diff-table .col-remote { width: 37%; }
+
+    .diff-row-changed { background: var(--bg-hover); }
+    .diff-dot {
+      width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+    }
+    .diff-dot-green { background: var(--green); }
+    .diff-dot-red { background: var(--red); }
+    .diff-dot-yellow { background: var(--yellow); }
+
+    .val-changed { color: var(--green); font-weight: 500; }
+    .val-old { color: var(--red); text-decoration: line-through; opacity: 0.8; }
+    .val-added { color: var(--green); }
+    .val-removed { color: var(--red); }
+
+    /* Status bar */
+    .status-bar {
+      padding: 8px 20px; border-top: 1px solid var(--border);
+      background: var(--bg-secondary); font-size: 0.78rem; color: var(--text-dim);
+      display: flex; align-items: center; gap: 16px; flex-shrink: 0;
+    }
+    .status-bar .spinner {
+      width: 12px; height: 12px; border: 2px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin 0.6s linear infinite; flex-shrink: 0;
+    }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    .sync-plan { margin: 12px 0; }
-    .sync-action { padding: 6px 12px; font-family: monospace; font-size: 0.85rem; border-left: 2px solid var(--border); margin: 2px 0; }
-    .sync-action-insert, .sync-action-create_collection { border-left-color: #3fb950; color: #3fb950; }
-    .sync-action-delete, .sync-action-drop_collection { border-left-color: #f85149; color: #f85149; }
-    .sync-action-replace { border-left-color: #d29922; color: #d29922; }
+    .status-stats { display: flex; gap: 14px; }
+    .status-stat { display: flex; align-items: center; gap: 4px; }
+    .stat-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
 
-    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 100; }
-    .modal { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 12px; padding: 24px; max-width: 500px; width: 90%; }
-    .modal h3 { margin-bottom: 12px; color: #d29922; }
-    .modal p { margin-bottom: 16px; color: var(--text-muted); }
-    .modal .btn-group { justify-content: flex-end; }
+    /* Modal */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.65); display: flex;
+      align-items: center; justify-content: center; z-index: 200;
+    }
+    .modal {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 28px; max-width: 480px; width: 90%;
+    }
+    .modal h3 { font-size: 1rem; margin-bottom: 12px; color: var(--yellow); }
+    .modal p { margin-bottom: 16px; color: var(--text-muted); font-size: 0.88rem; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
 
-    .toolbar { display: flex; gap: 8px; margin: 8px 0; }
+    /* Empty state */
+    .empty-state {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      flex-direction: column; color: var(--text-dim); gap: 8px;
+    }
+    .empty-state-icon { font-size: 2.5rem; opacity: 0.3; }
+    .empty-state-text { font-size: 0.9rem; }
+
+    /* Connection status */
+    .connect-status {
+      margin-top: 12px; padding: 8px 12px; border-radius: 8px; font-size: 0.82rem;
+    }
+    .connect-status-error { background: var(--red-bg); border: 1px solid var(--red-border); color: var(--red); }
+    .connect-status-info { background: rgba(108,140,255,0.1); border: 1px solid rgba(108,140,255,0.25); color: var(--accent); }
 
     .hidden { display: none !important; }
+
+    /* "All" sidebar item */
+    .sidebar-item-all {
+      font-weight: 600; color: var(--text);
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* Select all checkbox in header */
+    .select-all-row {
+      display: flex; align-items: center; gap: 8px; padding: 8px 20px;
+      border-bottom: 1px solid var(--border); background: var(--bg-secondary);
+    }
+    .select-all-row label { font-size: 0.82rem; color: var(--text-muted); cursor: pointer; }
+    .select-all-row input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <h1>mongodiff <span>— diff &amp; sync MongoDB databases</span></h1>
-      <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">Dark / Light</button>
+
+<!-- ─── Top Nav ─── -->
+<nav class="nav">
+  <div class="nav-logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+    mongodiff
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" data-page="connect" onclick="showPage('connect')">Connect</button>
+    <button class="nav-tab" data-page="diff" onclick="showPage('diff')">Changesets</button>
+  </div>
+  <div class="nav-right">
+    <span class="nav-version">v0.2.0</span>
+    <button class="theme-btn" onclick="toggleTheme()" title="Toggle theme">Theme</button>
+  </div>
+</nav>
+
+<!-- ─── Connect Page ─── -->
+<div id="pageConnect" class="page connect-page active">
+  <div class="connect-card">
+    <h2>Database Connections</h2>
+
+    <div class="form-group">
+      <label>Source URI (local)</label>
+      <div class="uri-field">
+        <input type="text" id="source" placeholder="mongodb://localhost:27017">
+        <button class="btn-test" id="btnTestSource" onclick="testConnection('source')">Test</button>
+      </div>
     </div>
 
-    <div class="form-grid">
-      <div>
-        <label>Source URI</label>
-        <div class="uri-row">
-          <input type="text" id="source" placeholder="mongodb://localhost:27017">
-          <button class="btn-test" id="btnTestSource" onclick="testConnection('source')">Test</button>
-        </div>
+    <div class="form-group">
+      <label>Target URI (remote)</label>
+      <div class="uri-field">
+        <input type="text" id="target" placeholder="mongodb://staging.example.com:27017">
+        <button class="btn-test" id="btnTestTarget" onclick="testConnection('target')">Test</button>
       </div>
-      <div>
-        <label>Target URI</label>
-        <div class="uri-row">
-          <input type="text" id="target" placeholder="mongodb://staging:27017">
-          <button class="btn-test" id="btnTestTarget" onclick="testConnection('target')">Test</button>
-        </div>
-      </div>
-      <div>
+    </div>
+
+    <div class="form-row-2">
+      <div class="form-group">
         <label>Database</label>
         <select id="database" disabled>
           <option value="">Test both connections first</option>
         </select>
       </div>
-      <div>
+      <div class="form-group">
         <label>Timeout (seconds)</label>
         <input type="number" id="timeout" value="30" min="5">
       </div>
-      <div>
-        <label>Include collections (comma-separated)</label>
+    </div>
+
+    <div class="form-row-2">
+      <div class="form-group">
+        <label>Include collections</label>
         <input type="text" id="include" placeholder="Leave empty for all">
       </div>
-      <div>
+      <div class="form-group">
         <label>Exclude collections</label>
         <input type="text" id="exclude" placeholder="sessions,logs">
       </div>
-      <div class="form-row">
-        <label>Ignore fields</label>
-        <input type="text" id="ignoreFields" placeholder="__v,meta.modified">
-      </div>
-      <div class="form-row" style="display:flex;align-items:center;gap:8px;">
-        <input type="checkbox" id="sourceToTarget" checked style="width:auto;">
-        <label for="sourceToTarget" style="margin:0;cursor:pointer;">Source → Target only <span style="color:var(--text-muted);font-size:0.8rem;">(ignore target-only items)</span></label>
-      </div>
-      <div class="form-row btn-group">
-        <button class="btn-primary" id="btnDiff" onclick="runDiff()">Run Diff</button>
-        <button class="btn-warning" id="btnSync" onclick="runSyncDryRun()" disabled>Sync (Dry Run)</button>
-        <button class="btn-secondary hidden" id="btnDownload" onclick="downloadJSON()">Download JSON</button>
-      </div>
     </div>
 
-    <div id="status" class="hidden"></div>
-    <div id="summaryBar" class="hidden"></div>
-    <div id="results" class="results"></div>
-    <div id="syncPlan" class="hidden"></div>
-    <div id="confirmModal" class="modal-overlay hidden">
-      <div class="modal">
-        <h3>Confirm Sync</h3>
-        <p id="confirmText"></p>
-        <div id="syncResult" class="hidden"></div>
-        <div class="btn-group">
-          <button class="btn-secondary" onclick="closeModal()">Cancel</button>
-          <button class="btn-danger" id="btnApply" onclick="applySync()">Apply Changes</button>
-        </div>
-      </div>
+    <div class="form-group">
+      <label>Ignore fields</label>
+      <input type="text" id="ignoreFields" placeholder="__v,meta.modified,updatedAt">
+    </div>
+
+    <div class="checkbox-row">
+      <input type="checkbox" id="sourceToTarget" checked>
+      <label for="sourceToTarget">Source → Target only</label>
+      <span class="checkbox-hint">(ignore target-only items)</span>
+    </div>
+
+    <div id="connectStatus" class="hidden"></div>
+
+    <div class="connect-actions">
+      <button class="btn btn-primary" id="btnDiff" onclick="runDiff()">Run Diff</button>
     </div>
   </div>
+</div>
 
-  <script>
-    let lastDiffData = null;
-    let sourceDatabases = null;
-    let targetDatabases = null;
+<!-- ─── Diff Page ─── -->
+<div id="pageDiff" class="page diff-page">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-title">Collections</span>
+      <span class="sidebar-count" id="sidebarCount"></span>
+    </div>
+    <div class="sidebar-list" id="sidebarList">
+      <!-- Populated dynamically -->
+    </div>
+    <div class="sidebar-status" id="sidebarStatus">
+      <span id="sidebarStatusText">Ready</span>
+      <div class="sidebar-progress-bar hidden" id="sidebarProgress">
+        <div class="sidebar-progress-fill" id="sidebarProgressFill" style="width:0%"></div>
+      </div>
+    </div>
+  </aside>
 
-    // Theme
-    function toggleTheme() {
-      const html = document.documentElement;
-      const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-      html.setAttribute('data-theme', next);
-      localStorage.setItem('mongodiff-theme', next);
-    }
-    (function() {
-      const saved = localStorage.getItem('mongodiff-theme');
-      if (saved) document.documentElement.setAttribute('data-theme', saved);
-    })();
+  <!-- Main -->
+  <div class="main-content">
+    <div class="content-header">
+      <div class="content-header-left">
+        <h2>Diff Results<span class="db-name" id="dbNameDisplay"></span></h2>
+        <div class="op-count" id="opCountDisplay"></div>
+      </div>
+      <div class="content-header-right">
+        <span class="selection-counter" id="selectionCounter"></span>
+        <button class="btn btn-sm btn-secondary" id="btnDownload" onclick="downloadJSON()">Download JSON</button>
+        <button class="btn btn-sm btn-sync" id="btnApplySelected" onclick="showSyncModal()">Apply Selected</button>
+      </div>
+    </div>
 
-    // Connection test
-    async function testConnection(field) {
-      const uri = document.getElementById(field).value.trim();
-      if (!uri) return;
+    <div class="select-all-row">
+      <input type="checkbox" id="selectAll" checked onchange="toggleSelectAll()">
+      <label for="selectAll">Select all operations</label>
+    </div>
 
-      const btn = document.getElementById(field === 'source' ? 'btnTestSource' : 'btnTestTarget');
-      btn.textContent = '...';
-      btn.className = 'btn-test';
+    <div class="operations-area" id="operationsArea">
+      <div class="empty-state" id="emptyState">
+        <div class="empty-state-icon">⟠</div>
+        <div class="empty-state-text">No diff results yet. Connect and run a diff.</div>
+      </div>
+    </div>
 
-      // Reset databases for this side
-      if (field === 'source') sourceDatabases = null;
-      else targetDatabases = null;
+    <div class="status-bar" id="statusBar">
+      <div class="status-stats" id="statusStats"></div>
+      <span id="statusText" style="margin-left:auto"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div id="confirmModal" class="modal-overlay hidden">
+  <div class="modal">
+    <h3>Confirm Sync</h3>
+    <p id="confirmText"></p>
+    <div id="syncResultDisplay" class="hidden"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-danger" id="btnConfirmApply" onclick="applySync()">Apply Changes</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── State ───
+let lastDiffData = null;
+let sourceDatabases = null;
+let targetDatabases = null;
+let allOperations = [];    // flat list: { collection, docId, type, doc, fields, source, target, checked }
+let activeFilter = 'all';  // 'all' or collection name
+let collectionStats = {};  // { name: { insert, modify, delete } }
+
+// ─── Theme ───
+function toggleTheme() {
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('mongodiff-theme', next);
+}
+(function() {
+  const saved = localStorage.getItem('mongodiff-theme');
+  if (saved) document.documentElement.setAttribute('data-theme', saved);
+})();
+
+// ─── Page Navigation ───
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('active');
+  document.querySelector('.nav-tab[data-page="' + name + '"]').classList.add('active');
+}
+
+// ─── Connection Testing ───
+async function testConnection(field) {
+  const uri = document.getElementById(field).value.trim();
+  if (!uri) return;
+
+  const btn = document.getElementById(field === 'source' ? 'btnTestSource' : 'btnTestTarget');
+  btn.textContent = '...';
+  btn.className = 'btn-test';
+
+  if (field === 'source') sourceDatabases = null;
+  else targetDatabases = null;
+  updateDatabaseDropdown();
+
+  try {
+    const timeout = parseInt(document.getElementById('timeout').value) || 10;
+    const res = await fetch('/api/test-connection', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uri, timeout })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      btn.textContent = '✓ ' + data.databases.length + ' dbs';
+      btn.className = 'btn-test success';
+      if (field === 'source') sourceDatabases = data.databases;
+      else targetDatabases = data.databases;
       updateDatabaseDropdown();
+    } else {
+      btn.textContent = '✗ Fail';
+      btn.className = 'btn-test fail';
+      btn.title = data.error;
+    }
+  } catch (err) {
+    btn.textContent = '✗ Fail';
+    btn.className = 'btn-test fail';
+    btn.title = err.message;
+  }
+}
 
-      try {
-        const timeout = parseInt(document.getElementById('timeout').value) || 10;
-        const res = await fetch('/api/test-connection', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ uri, timeout })
-        });
-        const data = await res.json();
+function updateDatabaseDropdown() {
+  const select = document.getElementById('database');
+  const prev = select.value;
+  while (select.options.length) select.remove(0);
 
-        if (data.success) {
-          btn.textContent = 'OK (' + data.databases.length + ' dbs)';
-          btn.className = 'btn-test success';
-          if (field === 'source') sourceDatabases = data.databases;
-          else targetDatabases = data.databases;
-          updateDatabaseDropdown();
-        } else {
-          btn.textContent = 'Fail';
-          btn.className = 'btn-test fail';
-          btn.title = data.error;
-        }
-      } catch (err) {
-        btn.textContent = 'Fail';
-        btn.className = 'btn-test fail';
-        btn.title = err.message;
-      }
+  if (!sourceDatabases || !targetDatabases) {
+    select.add(new Option('Test both connections first', ''));
+    select.disabled = true;
+    return;
+  }
+
+  const sourceSet = new Set(sourceDatabases);
+  const common = targetDatabases.filter(db => sourceSet.has(db)).sort();
+
+  if (common.length === 0) {
+    select.add(new Option('No common databases found', ''));
+    select.disabled = true;
+    return;
+  }
+
+  select.add(new Option('Select a database...', ''));
+  for (const db of common) select.add(new Option(db, db));
+  select.disabled = false;
+  if (prev && common.includes(prev)) select.value = prev;
+}
+
+// ─── Form Data ───
+function getFormData() {
+  const data = {
+    source: document.getElementById('source').value,
+    target: document.getElementById('target').value,
+    database: document.getElementById('database').value,
+    timeout: parseInt(document.getElementById('timeout').value) || 30,
+  };
+  const include = document.getElementById('include').value.trim();
+  const exclude = document.getElementById('exclude').value.trim();
+  const ignore = document.getElementById('ignoreFields').value.trim();
+  if (include) data.include = include.split(',').map(s => s.trim());
+  if (exclude) data.exclude = exclude.split(',').map(s => s.trim());
+  if (ignore) data.ignoreFields = ignore.split(',').map(s => s.trim());
+  data.sourceToTarget = document.getElementById('sourceToTarget').checked;
+  return data;
+}
+
+// ─── Diff Streaming ───
+async function runDiff() {
+  const data = getFormData();
+  if (!data.source || !data.target || !data.database) {
+    showConnectStatus('Please fill in source, target, and database.', 'error');
+    return;
+  }
+
+  // Switch to diff page immediately so user sees progress
+  showPage('diff');
+
+  // Reset state
+  allOperations = [];
+  collectionStats = {};
+  activeFilter = 'all';
+  lastDiffData = { collections: [], stats: {}, database: data.database };
+  document.getElementById('dbNameDisplay').textContent = ' — ' + data.database;
+  document.getElementById('operationsArea').innerHTML = '';
+  document.getElementById('sidebarList').innerHTML = '';
+  document.getElementById('sidebarCount').textContent = '';
+  document.getElementById('sidebarProgress').classList.remove('hidden');
+  document.getElementById('sidebarProgressFill').style.width = '0%';
+  document.getElementById('opCountDisplay').textContent = '';
+  document.getElementById('selectionCounter').textContent = '';
+  document.getElementById('btnDiff').disabled = true;
+
+  // Show prominent loading state in the operations area
+  const loadingEl = document.createElement('div');
+  loadingEl.className = 'empty-state';
+  loadingEl.id = 'loadingState';
+  loadingEl.innerHTML = '<div class="spinner" style="width:24px;height:24px;border-width:3px;margin-bottom:8px"></div><div class="empty-state-text">Connecting to databases...</div>';
+  document.getElementById('operationsArea').appendChild(loadingEl);
+
+  let collCount = 0, totalColls = 0;
+  const startTime = Date.now();
+
+  try {
+    const res = await fetch('/api/diff/stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+
+    if (!res.ok) {
+      let errMsg = 'Request failed';
+      try { const err = await res.json(); errMsg = err.error || errMsg; } catch(e) {}
+      document.getElementById('loadingState')?.remove();
+      showErrorInOpsArea(errMsg);
+      setStatusText('Error: ' + errMsg);
+      return;
     }
 
-    function updateDatabaseDropdown() {
-      const select = document.getElementById('database');
-      const prev = select.value;
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
 
-      // Clear options
-      while (select.options.length) select.remove(0);
+    setStatusText('Connecting...', true);
 
-      if (!sourceDatabases || !targetDatabases) {
-        select.add(new Option('Test both connections first', ''));
-        select.disabled = true;
-        return;
-      }
+    console.log('[mongodiff] Stream reader started');
+    while (true) {
+      const { done, value } = await reader.read();
+      console.log('[mongodiff] reader.read() done=' + done + ', bytes=' + (value ? value.length : 0));
+      if (done) break;
 
-      const sourceSet = new Set(sourceDatabases);
-      const common = targetDatabases.filter(db => sourceSet.has(db)).sort();
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
 
-      if (common.length === 0) {
-        select.add(new Option('No common databases found', ''));
-        select.disabled = true;
-        return;
-      }
+      console.log('[mongodiff] Lines to process:', lines.filter(l => l.startsWith('data: ')).length);
 
-      select.add(new Option('Select a database...', ''));
-      for (const db of common) {
-        select.add(new Option(db, db));
-      }
-      select.disabled = false;
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
 
-      // Restore previous selection if still valid
-      if (prev && common.includes(prev)) {
-        select.value = prev;
-      }
-    }
+        let event;
+        try { event = JSON.parse(line.slice(6)); } catch(e) { console.error('[mongodiff] JSON parse error:', e, line.slice(0,100)); continue; }
 
-    function getFormData() {
-      const data = {
-        source: document.getElementById('source').value,
-        target: document.getElementById('target').value,
-        database: document.getElementById('database').value,
-        timeout: parseInt(document.getElementById('timeout').value) || 30,
-      };
-      const include = document.getElementById('include').value.trim();
-      const exclude = document.getElementById('exclude').value.trim();
-      const ignore = document.getElementById('ignoreFields').value.trim();
-      if (include) data.include = include.split(',').map(s => s.trim());
-      if (exclude) data.exclude = exclude.split(',').map(s => s.trim());
-      if (ignore) data.ignoreFields = ignore.split(',').map(s => s.trim());
-      data.sourceToTarget = document.getElementById('sourceToTarget').checked;
-      return data;
-    }
+        console.log('[mongodiff] Event type:', event.type, event.type === 'collection' ? event.collection?.name : '');
 
-    function showStatus(msg, type) {
-      const el = document.getElementById('status');
-      el.className = 'status status-' + type;
-      el.textContent = msg;
-      el.classList.remove('hidden');
-    }
+        if (event.type === 'start') {
+          totalColls = event.total;
+          document.getElementById('loadingState')?.remove();
+          setStatusText('Diffing 0/' + totalColls + ' collections...', true);
+          updateLoadingText('Diffing collections...');
+        } else if (event.type === 'collection') {
+          collCount++;
+          document.getElementById('loadingState')?.remove();
 
-    function showStatusLoading(msg) {
-      const el = document.getElementById('status');
-      el.className = 'status status-info';
-      el.textContent = '';
-      const spinner = document.createElement('span');
-      spinner.className = 'spinner';
-      el.appendChild(spinner);
-      el.appendChild(document.createTextNode(msg));
-      el.classList.remove('hidden');
-    }
+          const coll = event.collection;
+          lastDiffData.collections.push(coll);
+          lastDiffData.stats = event.stats;
 
-    function hideStatus() {
-      document.getElementById('status').classList.add('hidden');
-    }
+          processCollection(coll);
+          console.log('[mongodiff] After processCollection: allOperations.length=' + allOperations.length);
 
-    function escapeText(str) {
-      if (str == null) return '';
-      return String(str);
-    }
+          const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+          const rate = (collCount / (Date.now() - startTime) * 1000).toFixed(1);
+          setStatusText('Diffing ' + collCount + '/' + totalColls + ' (' + elapsed + 's, ' + rate + '/s)', true);
+          updateProgressBar(collCount, totalColls);
+          updateSidebar();
+          updateOpCount();
+          updateSelectionCounter();
+          updateStatusStats(event.stats);
 
-    // Download diff as JSON
-    function downloadJSON() {
-      if (!lastDiffData) return;
-      const blob = new Blob([JSON.stringify(lastDiffData, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'mongodiff-' + (lastDiffData.database || 'result') + '.json';
-      a.click();
-      URL.revokeObjectURL(url);
-    }
-
-    async function runDiff() {
-      const data = getFormData();
-      if (!data.source || !data.target || !data.database) {
-        showStatus('Please fill in source, target, and database.', 'error');
-        return;
-      }
-
-      showStatusLoading('Connecting...');
-      document.getElementById('btnDiff').disabled = true;
-      document.getElementById('results').textContent = '';
-      document.getElementById('summaryBar').classList.add('hidden');
-      document.getElementById('syncPlan').classList.add('hidden');
-      document.getElementById('btnSync').disabled = true;
-      document.getElementById('btnDownload').classList.add('hidden');
-      lastDiffData = { collections: [], stats: {}, database: data.database };
-
-      try {
-        const res = await fetch('/api/diff/stream', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-
-        if (!res.ok) {
-          const err = await res.json();
-          showStatus(err.error || 'Request failed', 'error');
+        } else if (event.type === 'error') {
+          document.getElementById('loadingState')?.remove();
+          showErrorInOpsArea(event.error);
+          setStatusText('Error: ' + event.error);
           return;
-        }
-
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        let collCount = 0;
-        let totalColls = 0;
-        let startTime = Date.now();
-
-        const summaryEl = document.getElementById('summaryBar');
-        summaryEl.className = 'summary-bar';
-        summaryEl.textContent = '';
-        const resultsEl = document.getElementById('results');
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop();
-
-          for (const line of lines) {
-            if (!line.startsWith('data: ')) continue;
-            const event = JSON.parse(line.slice(6));
-
-            if (event.type === 'start') {
-              totalColls = event.total;
-              showStatusLoading('Diffing 0/' + totalColls + ' collections...');
-            } else if (event.type === 'collection') {
-              collCount++;
-              const coll = event.collection;
-              lastDiffData.collections.push(coll);
-              lastDiffData.stats = event.stats;
-
-              const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-              const rate = (collCount / (Date.now() - startTime) * 1000).toFixed(1);
-              const progress = totalColls
-                ? collCount + '/' + totalColls + ' collections'
-                : collCount + ' collections processed';
-              showStatusLoading('Diffing ' + progress + ' (' + elapsed + 's, ' + rate + ' colls/s)');
-
-              renderCollectionDOM(resultsEl, coll);
-              updateSummaryBar(summaryEl, event.stats, collCount, totalColls);
-            } else if (event.type === 'error') {
-              showStatus(event.error, 'error');
-              return;
-            } else if (event.type === 'done') {
-              lastDiffData.source = event.source;
-              lastDiffData.target = event.target;
-            }
-          }
-        }
-
-        const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
-        showStatus('Done in ' + totalTime + 's — ' + collCount + ' collections compared', 'success');
-        document.getElementById('btnSync').disabled = false;
-        document.getElementById('btnDownload').classList.remove('hidden');
-      } catch (err) {
-        showStatus('Request failed: ' + err.message, 'error');
-      } finally {
-        document.getElementById('btnDiff').disabled = false;
-      }
-    }
-
-    function updateSummaryBar(summaryEl, stats, current, total) {
-      summaryEl.textContent = '';
-      const statItems = [
-        { count: stats.CollectionsAdded, label: 'added', dotClass: 'dot-green' },
-        { count: stats.CollectionsRemoved, label: 'removed', dotClass: 'dot-red' },
-        { count: stats.CollectionsMatched, label: 'matched', dotClass: 'dot-yellow' },
-        { count: stats.DocumentsAdded || 0, label: 'docs added', dotClass: 'dot-green' },
-        { count: stats.DocumentsModified || 0, label: 'docs modified', dotClass: 'dot-yellow' },
-        { count: stats.DocumentsRemoved || 0, label: 'docs removed', dotClass: 'dot-red' },
-      ];
-
-      for (const item of statItems) {
-        if (item.count || item.label.startsWith('docs')) {
-          const span = document.createElement('span');
-          span.className = 'summary-stat';
-          const dot = document.createElement('span');
-          dot.className = 'dot ' + item.dotClass;
-          span.appendChild(dot);
-          span.appendChild(document.createTextNode(item.count + ' ' + item.label));
-          summaryEl.appendChild(span);
+        } else if (event.type === 'done') {
+          lastDiffData.source = event.source;
+          lastDiffData.target = event.target;
         }
       }
-
-      if (total) {
-        const prog = document.createElement('span');
-        prog.className = 'progress-text';
-        prog.textContent = current + '/' + total;
-        summaryEl.appendChild(prog);
-      }
     }
 
-    function renderCollectionDOM(parent, coll) {
-      if (coll.diffType === 'identical' && !coll.error) return;
+    document.getElementById('loadingState')?.remove();
+    const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
+    setStatusText('Completed in ' + totalTime + 's — ' + collCount + ' collections');
+    document.getElementById('sidebarProgress').classList.add('hidden');
+    updateSidebar();
+    renderFilteredOps();
 
-      const div = document.createElement('div');
-      const cssClass = coll.error ? 'error' : coll.diffType;
-      div.className = 'collection coll-' + cssClass;
-
-      const header = document.createElement('div');
-      header.className = 'collection-header';
-      header.addEventListener('click', function() {
-        this.nextElementSibling.classList.toggle('open');
-      });
-
-      const nameSpan = document.createElement('span');
-      nameSpan.appendChild(document.createTextNode(coll.name + ' '));
-      const badge = document.createElement('span');
-      const badgeType = coll.error ? 'error' : coll.diffType;
-      badge.className = 'badge badge-' + badgeType;
-      badge.textContent = badgeType;
-      nameSpan.appendChild(badge);
-      header.appendChild(nameSpan);
-
-      const summarySpan = document.createElement('span');
-      summarySpan.style.color = 'var(--text-muted)';
-      summarySpan.style.fontSize = '0.85rem';
-      summarySpan.textContent = collSummary(coll);
-      header.appendChild(summarySpan);
-
-      div.appendChild(header);
-
-      const body = document.createElement('div');
-      body.className = 'collection-body';
-      if (coll.error) {
-        const errDiv = document.createElement('div');
-        errDiv.style.color = '#f85149';
-        errDiv.textContent = coll.error;
-        body.appendChild(errDiv);
-      } else {
-        renderDocumentsDOM(body, coll.documents || []);
-      }
-      div.appendChild(body);
-
-      parent.appendChild(div);
+    if (allOperations.length === 0) {
+      const emptyEl = document.createElement('div');
+      emptyEl.className = 'empty-state';
+      emptyEl.innerHTML = '<div class="empty-state-icon">✓</div><div class="empty-state-text">Databases are identical. No differences found.</div>';
+      document.getElementById('operationsArea').appendChild(emptyEl);
     }
 
-    function collSummary(coll) {
-      if (coll.error) return 'skipped';
-      if (coll.diffType === 'identical') return '';
-      const parts = [];
-      if (coll.stats.DocumentsAdded) parts.push(coll.stats.DocumentsAdded + ' added');
-      if (coll.stats.DocumentsModified) parts.push(coll.stats.DocumentsModified + ' modified');
-      if (coll.stats.DocumentsRemoved) parts.push(coll.stats.DocumentsRemoved + ' removed');
-      return parts.join(', ');
+  } catch (err) {
+    document.getElementById('loadingState')?.remove();
+    showErrorInOpsArea(err.message);
+    setStatusText('Failed: ' + err.message);
+  } finally {
+    document.getElementById('btnDiff').disabled = false;
+  }
+}
+
+function showErrorInOpsArea(msg) {
+  const el = document.createElement('div');
+  el.className = 'empty-state';
+  el.innerHTML = '<div class="empty-state-icon" style="color:var(--red)">✗</div><div class="empty-state-text" style="color:var(--red)">' + escapeHtml(msg) + '</div><div class="empty-state-text"><button class="btn btn-secondary" onclick="showPage(\'connect\')">Back to Connect</button></div>';
+  document.getElementById('operationsArea').appendChild(el);
+}
+
+function updateLoadingText(msg) {
+  const el = document.getElementById('loadingState');
+  if (el) {
+    const textEl = el.querySelector('.empty-state-text');
+    if (textEl) textEl.textContent = msg;
+  }
+}
+
+function processCollection(coll) {
+  if (!coll.documents || coll.documents.length === 0) {
+    if (coll.diffType === 'added') {
+      // Collection added but no docs detail — show as collection-level op
     }
+    return;
+  }
 
-    function renderDocumentsDOM(parent, docs) {
-      if (!docs || docs.length === 0) {
-        const note = document.createElement('div');
-        note.style.color = 'var(--text-muted)';
-        note.textContent = 'No document details';
-        parent.appendChild(note);
-        return;
+  const stats = { insert: 0, modify: 0, delete: 0 };
+
+  for (const doc of coll.documents) {
+    let type;
+    if (doc.diffType === 'added') { type = 'insert'; stats.insert++; }
+    else if (doc.diffType === 'removed') { type = 'delete'; stats.delete++; }
+    else if (doc.diffType === 'modified') { type = 'modify'; stats.modify++; }
+    else continue;
+
+    const op = {
+      collection: coll.name,
+      docId: doc._id,
+      type: type,
+      fields: doc.fields || [],
+      source: doc.source,
+      target: doc.target,
+      checked: true,
+      idx: allOperations.length,
+    };
+    allOperations.push(op);
+
+    // Append to DOM immediately (streaming)
+    appendOpRow(op);
+  }
+
+  collectionStats[coll.name] = stats;
+}
+
+// ─── DOM Rendering ───
+function appendOpRow(op) {
+  const area = document.getElementById('operationsArea');
+  const wrapper = document.createElement('div');
+  wrapper.setAttribute('data-op-idx', op.idx);
+  wrapper.setAttribute('data-collection', op.collection);
+
+  // Op row
+  const row = document.createElement('div');
+  row.className = 'op-row';
+  row.innerHTML = `
+    <div class="op-checkbox"><input type="checkbox" ${op.checked ? 'checked' : ''} onchange="toggleOp(${op.idx}, this.checked)" onclick="event.stopPropagation()"></div>
+    <span class="op-badge op-badge-${op.type}">${op.type}</span>
+    <span class="op-id">${escapeHtml(String(op.docId))}</span>
+    <span class="op-collection">${op.collection}</span>
+    <button class="op-toggle" onclick="event.stopPropagation(); toggleDetail(${op.idx})">+</button>
+  `;
+  row.addEventListener('click', () => toggleDetail(op.idx));
+  wrapper.appendChild(row);
+
+  // Detail panel
+  const detail = document.createElement('div');
+  detail.className = 'op-detail';
+  detail.id = 'detail-' + op.idx;
+
+  if (op.type === 'modify' && op.fields && op.fields.length > 0) {
+    detail.appendChild(buildDiffTable(op));
+  } else if (op.type === 'insert' && op.source) {
+    const pre = document.createElement('div');
+    pre.className = 'doc-preview';
+    pre.textContent = formatDoc(op.source);
+    detail.appendChild(pre);
+  } else if (op.type === 'delete' && op.target) {
+    const pre = document.createElement('div');
+    pre.className = 'doc-preview';
+    pre.textContent = formatDoc(op.target);
+    detail.appendChild(pre);
+  }
+
+  wrapper.appendChild(detail);
+  area.appendChild(wrapper);
+}
+
+function buildDiffTable(op) {
+  const table = document.createElement('table');
+  table.className = 'diff-table';
+
+  // Header
+  const thead = document.createElement('thead');
+  thead.innerHTML = '<tr><th class="col-indicator"></th><th class="col-field">Field</th><th class="col-local">Local (yours)</th><th class="col-remote">Remote (target)</th></tr>';
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+
+  // Build a map of changed fields for quick lookup
+  const changedFields = new Set();
+  const fieldMap = {};
+  for (const f of op.fields) {
+    changedFields.add(f.path);
+    fieldMap[f.path] = f;
+  }
+
+  // Collect all field paths from source and target docs
+  const allPaths = new Set();
+  if (op.source) collectPaths(op.source, '', allPaths);
+  if (op.target) collectPaths(op.target, '', allPaths);
+  // Also include field paths from the diff
+  for (const f of op.fields) allPaths.add(f.path);
+
+  const sortedPaths = Array.from(allPaths).sort();
+
+  for (const path of sortedPaths) {
+    if (path === '_id') continue; // already shown in the row
+
+    const tr = document.createElement('tr');
+    const isChanged = changedFields.has(path);
+    if (isChanged) tr.className = 'diff-row-changed';
+
+    const f = fieldMap[path];
+
+    // Indicator
+    const tdDot = document.createElement('td');
+    tdDot.className = 'col-indicator';
+    if (isChanged) {
+      const dot = document.createElement('span');
+      dot.className = 'diff-dot';
+      if (f) {
+        if (f.diffType === 'added') dot.className += ' diff-dot-green';
+        else if (f.diffType === 'removed') dot.className += ' diff-dot-red';
+        else dot.className += ' diff-dot-yellow';
       }
-
-      for (const doc of docs) {
-        const docDiv = document.createElement('div');
-        docDiv.className = 'doc-diff';
-
-        const idDiv = document.createElement('div');
-        idDiv.className = 'doc-id';
-        const prefix = doc.diffType === 'added' ? '+ ' : doc.diffType === 'removed' ? '- ' : '~ ';
-        idDiv.textContent = prefix + '_id: ' + escapeText(doc._id);
-        docDiv.appendChild(idDiv);
-
-        if (doc.diffType === 'added') {
-          const line = document.createElement('div');
-          line.className = 'field-added';
-          line.textContent = '+ added document';
-          docDiv.appendChild(line);
-        } else if (doc.diffType === 'removed') {
-          const line = document.createElement('div');
-          line.className = 'field-removed';
-          line.textContent = '- removed document';
-          docDiv.appendChild(line);
-        } else if (doc.fields && doc.fields.length > 0) {
-          for (const f of doc.fields) {
-            renderFieldDOM(docDiv, f);
-          }
-        }
-
-        parent.appendChild(docDiv);
-      }
+      tdDot.appendChild(dot);
     }
+    tr.appendChild(tdDot);
 
-    function renderFieldDOM(parent, f) {
+    // Field name
+    const tdField = document.createElement('td');
+    tdField.className = 'col-field';
+    tdField.textContent = path;
+    tr.appendChild(tdField);
+
+    // Local value (source)
+    const tdLocal = document.createElement('td');
+    tdLocal.className = 'col-local';
+    if (f) {
       if (f.diffType === 'added') {
-        const line = document.createElement('div');
-        line.className = 'field-added';
-        line.textContent = '+ ' + f.path + ': ' + escapeText(f.newValue);
-        parent.appendChild(line);
+        tdLocal.innerHTML = '<span class="val-added">' + escapeHtml(formatValue(f.newValue)) + '</span>';
       } else if (f.diffType === 'removed') {
-        const line = document.createElement('div');
-        line.className = 'field-removed';
-        line.textContent = '- ' + f.path + ': ' + escapeText(f.oldValue);
-        parent.appendChild(line);
+        tdLocal.innerHTML = '<span class="val-removed">' + escapeHtml(formatValue(f.oldValue)) + '</span>';
       } else {
-        if (f.oldType && f.newType && f.oldType !== f.newType) {
-          const line = document.createElement('div');
-          line.className = 'field-type-change';
-          line.textContent = '~ ' + f.path + ': (' + f.oldType + ' -> ' + f.newType + ') ' + escapeText(f.oldValue) + ' -> ' + escapeText(f.newValue);
-          parent.appendChild(line);
-        } else {
-          const oldLine = document.createElement('div');
-          oldLine.className = 'field-modified-old';
-          oldLine.textContent = '- ' + f.path + ': ' + escapeText(f.oldValue);
-          parent.appendChild(oldLine);
-          const newLine = document.createElement('div');
-          newLine.className = 'field-modified-new';
-          newLine.textContent = '+ ' + f.path + ': ' + escapeText(f.newValue);
-          parent.appendChild(newLine);
-        }
+        // modified — source has the new value
+        tdLocal.innerHTML = '<span class="val-changed">' + escapeHtml(formatValue(f.newValue)) + '</span>';
       }
+    } else {
+      const val = getNestedValue(op.source, path);
+      tdLocal.textContent = val !== undefined ? formatValue(val) : '';
     }
+    tr.appendChild(tdLocal);
 
-    async function runSyncDryRun() {
-      const data = getFormData();
-      showStatusLoading('Generating sync plan...');
-
-      try {
-        const res = await fetch('/api/sync/dry-run', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-        const plan = await res.json();
-
-        if (plan.error) {
-          showStatus(plan.error, 'error');
-          return;
-        }
-
-        renderSyncPlan(plan);
-        hideStatus();
-      } catch (err) {
-        showStatus('Request failed: ' + err.message, 'error');
+    // Remote value (target)
+    const tdRemote = document.createElement('td');
+    tdRemote.className = 'col-remote';
+    if (f) {
+      if (f.diffType === 'added') {
+        tdRemote.innerHTML = '<span class="val-removed">—</span>';
+      } else if (f.diffType === 'removed') {
+        tdRemote.innerHTML = '<span class="val-removed">' + escapeHtml(formatValue(f.oldValue)) + '</span>';
+      } else {
+        tdRemote.innerHTML = '<span class="val-old">' + escapeHtml(formatValue(f.oldValue)) + '</span>';
       }
+    } else {
+      const val = getNestedValue(op.target, path);
+      tdRemote.textContent = val !== undefined ? formatValue(val) : '';
+    }
+    tr.appendChild(tdRemote);
+
+    tbody.appendChild(tr);
+  }
+
+  table.appendChild(tbody);
+  return table;
+}
+
+function collectPaths(obj, prefix, set) {
+  if (!obj || typeof obj !== 'object') return;
+  for (const key of Object.keys(obj)) {
+    const path = prefix ? prefix + '.' + key : key;
+    const val = obj[key];
+    if (val && typeof val === 'object' && !Array.isArray(val) && !(val instanceof Date)) {
+      collectPaths(val, path, set);
+    } else {
+      set.add(path);
+    }
+  }
+}
+
+function getNestedValue(obj, path) {
+  if (!obj) return undefined;
+  const parts = path.split('.');
+  let cur = obj;
+  for (const p of parts) {
+    if (cur == null || typeof cur !== 'object') return undefined;
+    cur = cur[p];
+  }
+  return cur;
+}
+
+function formatValue(v) {
+  if (v === null) return 'null';
+  if (v === undefined) return '';
+  if (typeof v === 'object') return JSON.stringify(v);
+  return String(v);
+}
+
+function formatDoc(doc) {
+  if (!doc) return '(empty)';
+  return JSON.stringify(doc, null, 2);
+}
+
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// ─── Interaction ───
+function toggleDetail(idx) {
+  const detail = document.getElementById('detail-' + idx);
+  const wrapper = detail.parentElement;
+  const row = wrapper.querySelector('.op-row');
+  const btn = row.querySelector('.op-toggle');
+
+  if (detail.classList.contains('open')) {
+    detail.classList.remove('open');
+    row.classList.remove('expanded');
+    btn.textContent = '+';
+  } else {
+    detail.classList.add('open');
+    row.classList.add('expanded');
+    btn.textContent = '−';
+  }
+}
+
+function toggleOp(idx, checked) {
+  allOperations[idx].checked = checked;
+  updateSelectionCounter();
+}
+
+function toggleSelectAll() {
+  const checked = document.getElementById('selectAll').checked;
+  const visible = getVisibleOps();
+  for (const op of visible) {
+    op.checked = checked;
+  }
+  // Update checkboxes in DOM
+  document.querySelectorAll('.op-checkbox input').forEach(cb => {
+    const row = cb.closest('[data-op-idx]');
+    if (row && !row.classList.contains('hidden')) {
+      cb.checked = checked;
+    }
+  });
+  updateSelectionCounter();
+}
+
+function getVisibleOps() {
+  if (activeFilter === 'all') return allOperations;
+  return allOperations.filter(op => op.collection === activeFilter);
+}
+
+function getSelectedOps() {
+  return allOperations.filter(op => op.checked);
+}
+
+// ─── Sidebar ───
+function updateSidebar() {
+  const list = document.getElementById('sidebarList');
+  list.innerHTML = '';
+
+  // "All" item
+  const totalOps = allOperations.length;
+  const allItem = document.createElement('div');
+  allItem.className = 'sidebar-item sidebar-item-all' + (activeFilter === 'all' ? ' active' : '');
+  allItem.innerHTML = `
+    <span class="sidebar-item-name">All</span>
+    <div class="sidebar-badges">
+      <span class="sidebar-badge sidebar-badge-total">${totalOps}</span>
+    </div>
+  `;
+  allItem.addEventListener('click', () => filterByCollection('all'));
+  list.appendChild(allItem);
+
+  // Collection items
+  const collNames = Object.keys(collectionStats).sort();
+  for (const name of collNames) {
+    const stats = collectionStats[name];
+    const totalCollOps = stats.insert + stats.modify + stats.delete;
+    if (totalCollOps === 0) continue;
+
+    const item = document.createElement('div');
+    item.className = 'sidebar-item' + (activeFilter === name ? ' active' : '');
+
+    let badges = '';
+    if (stats.insert > 0) badges += `<span class="sidebar-badge sidebar-badge-insert">${stats.insert}</span>`;
+    if (stats.modify > 0) badges += `<span class="sidebar-badge sidebar-badge-modify">${stats.modify}</span>`;
+    if (stats.delete > 0) badges += `<span class="sidebar-badge sidebar-badge-delete">${stats.delete}</span>`;
+
+    item.innerHTML = `
+      <span class="sidebar-item-name" title="${name}">${name}</span>
+      <div class="sidebar-badges">${badges}</div>
+    `;
+    item.addEventListener('click', () => filterByCollection(name));
+    list.appendChild(item);
+  }
+
+  document.getElementById('sidebarCount').textContent = collNames.length + ' collections';
+}
+
+function filterByCollection(name) {
+  activeFilter = name;
+  updateSidebar();
+  renderFilteredOps();
+  updateSelectionCounter();
+}
+
+function renderFilteredOps() {
+  const wrappers = document.querySelectorAll('#operationsArea > [data-op-idx]');
+  wrappers.forEach(w => {
+    const coll = w.getAttribute('data-collection');
+    if (activeFilter === 'all' || coll === activeFilter) {
+      w.classList.remove('hidden');
+    } else {
+      w.classList.add('hidden');
+    }
+  });
+}
+
+// ─── Status & Counts ───
+function setStatusText(msg, loading) {
+  const el = document.getElementById('statusText');
+  const statusBar = document.getElementById('statusBar');
+  if (loading) {
+    el.innerHTML = '<span class="spinner"></span> ' + escapeHtml(msg);
+  } else {
+    el.textContent = msg;
+  }
+  document.getElementById('sidebarStatusText').textContent = msg;
+}
+
+function updateProgressBar(current, total) {
+  if (total === 0) return;
+  const pct = Math.round((current / total) * 100);
+  document.getElementById('sidebarProgressFill').style.width = pct + '%';
+}
+
+function updateOpCount() {
+  const total = allOperations.length;
+  document.getElementById('opCountDisplay').textContent = total + ' operations';
+}
+
+function updateSelectionCounter() {
+  const visible = getVisibleOps();
+  const selected = visible.filter(op => op.checked).length;
+  document.getElementById('selectionCounter').textContent = selected + ' of ' + visible.length + ' selected';
+}
+
+function updateStatusStats(stats) {
+  const el = document.getElementById('statusStats');
+  el.innerHTML = '';
+  const items = [
+    { n: stats.DocumentsAdded || 0, label: 'added', color: 'var(--green)' },
+    { n: stats.DocumentsModified || 0, label: 'modified', color: 'var(--yellow)' },
+    { n: stats.DocumentsRemoved || 0, label: 'removed', color: 'var(--red)' },
+  ];
+  for (const item of items) {
+    const span = document.createElement('span');
+    span.className = 'status-stat';
+    span.innerHTML = `<span class="stat-dot" style="background:${item.color}"></span>${item.n} ${item.label}`;
+    el.appendChild(span);
+  }
+}
+
+function showConnectStatus(msg, type) {
+  const el = document.getElementById('connectStatus');
+  el.className = 'connect-status connect-status-' + type;
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+
+// ─── Download ───
+function downloadJSON() {
+  if (!lastDiffData) return;
+  const blob = new Blob([JSON.stringify(lastDiffData, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'mongodiff-' + (lastDiffData.database || 'result') + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── Sync ───
+function showSyncModal() {
+  const selected = getSelectedOps();
+  if (selected.length === 0) return;
+  const data = getFormData();
+  document.getElementById('confirmText').textContent =
+    'This will apply ' + selected.length + ' operations to the target database "' + data.database + '". A backup will be created first.';
+  document.getElementById('syncResultDisplay').classList.add('hidden');
+  document.getElementById('btnConfirmApply').disabled = false;
+  document.getElementById('confirmModal').classList.remove('hidden');
+}
+
+function closeModal() {
+  document.getElementById('confirmModal').classList.add('hidden');
+}
+
+async function applySync() {
+  const data = getFormData();
+  document.getElementById('btnConfirmApply').disabled = true;
+  const resultEl = document.getElementById('syncResultDisplay');
+  resultEl.textContent = 'Applying...';
+  resultEl.classList.remove('hidden');
+
+  try {
+    const res = await fetch('/api/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    const result = await res.json();
+
+    if (result.error) {
+      resultEl.className = 'connect-status connect-status-error';
+      resultEl.textContent = result.error;
+      return;
     }
 
-    function renderSyncPlan(plan) {
-      const el = document.getElementById('syncPlan');
-      el.classList.remove('hidden');
-      el.textContent = '';
+    const parts = [];
+    if (result.CollectionsCreated) parts.push(result.CollectionsCreated + ' collections created');
+    if (result.CollectionsDropped) parts.push(result.CollectionsDropped + ' collections dropped');
+    if (result.DocumentsInserted) parts.push(result.DocumentsInserted + ' documents inserted');
+    if (result.DocumentsReplaced) parts.push(result.DocumentsReplaced + ' documents replaced');
+    if (result.DocumentsDeleted) parts.push(result.DocumentsDeleted + ' documents deleted');
 
-      if (!plan.Actions || plan.Actions.length === 0) {
-        const msg = document.createElement('div');
-        msg.className = 'status status-success';
-        msg.textContent = 'Nothing to sync.';
-        el.appendChild(msg);
-        return;
-      }
+    resultEl.className = 'connect-status connect-status-info';
+    resultEl.textContent = 'Sync complete: ' + parts.join(', ') + (result.BackupPath ? '. Backup: ' + result.BackupPath : '');
 
-      const title = document.createElement('h2');
-      title.textContent = 'Sync Plan (' + plan.Actions.length + ' actions)';
-      el.appendChild(title);
-
-      const planDiv = document.createElement('div');
-      planDiv.className = 'sync-plan';
-      for (const a of plan.Actions) {
-        const actionDiv = document.createElement('div');
-        actionDiv.className = 'sync-action sync-action-' + a.Action;
-        const prefix = (a.Action === 'insert' || a.Action === 'create_collection') ? '+ '
-          : (a.Action === 'delete' || a.Action === 'drop_collection') ? '- ' : '~ ';
-        actionDiv.textContent = prefix + a.Collection + ': ' + a.Details;
-        planDiv.appendChild(actionDiv);
-      }
-      el.appendChild(planDiv);
-
-      const applyBtn = document.createElement('button');
-      applyBtn.className = 'btn-danger';
-      applyBtn.textContent = 'Apply Sync';
-      applyBtn.addEventListener('click', showConfirmModal);
-      el.appendChild(applyBtn);
+    if (result.Errors && result.Errors.length) {
+      resultEl.textContent += '\nErrors: ' + result.Errors.join(', ');
     }
-
-    function showConfirmModal() {
-      const data = getFormData();
-      document.getElementById('confirmText').textContent =
-        'This will modify the target database "' + data.database + '". A backup will be created before applying. Continue?';
-      document.getElementById('syncResult').classList.add('hidden');
-      document.getElementById('btnApply').disabled = false;
-      document.getElementById('confirmModal').classList.remove('hidden');
-    }
-
-    function closeModal() {
-      document.getElementById('confirmModal').classList.add('hidden');
-    }
-
-    async function applySync() {
-      const data = getFormData();
-      document.getElementById('btnApply').disabled = true;
-      const resultEl = document.getElementById('syncResult');
-      resultEl.textContent = 'Applying...';
-      resultEl.classList.remove('hidden');
-
-      try {
-        const res = await fetch('/api/sync', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-        const result = await res.json();
-
-        if (result.error) {
-          resultEl.textContent = '';
-          const errDiv = document.createElement('div');
-          errDiv.className = 'status status-error';
-          errDiv.textContent = result.error;
-          resultEl.appendChild(errDiv);
-          return;
-        }
-
-        const parts = [];
-        if (result.CollectionsCreated) parts.push(result.CollectionsCreated + ' collections created');
-        if (result.CollectionsDropped) parts.push(result.CollectionsDropped + ' collections dropped');
-        if (result.DocumentsInserted) parts.push(result.DocumentsInserted + ' documents inserted');
-        if (result.DocumentsReplaced) parts.push(result.DocumentsReplaced + ' documents replaced');
-        if (result.DocumentsDeleted) parts.push(result.DocumentsDeleted + ' documents deleted');
-
-        resultEl.textContent = '';
-        const successDiv = document.createElement('div');
-        successDiv.className = 'status status-success';
-        successDiv.textContent = 'Sync complete: ' + parts.join(', ') + '. Backup: ' + (result.BackupPath || 'none');
-        resultEl.appendChild(successDiv);
-
-        if (result.Errors && result.Errors.length) {
-          const errDiv = document.createElement('div');
-          errDiv.className = 'status status-error';
-          errDiv.textContent = 'Errors: ' + result.Errors.join(', ');
-          resultEl.appendChild(errDiv);
-        }
-      } catch (err) {
-        resultEl.textContent = '';
-        const errDiv = document.createElement('div');
-        errDiv.className = 'status status-error';
-        errDiv.textContent = 'Request failed: ' + err.message;
-        resultEl.appendChild(errDiv);
-      }
-    }
-  </script>
+  } catch (err) {
+    resultEl.className = 'connect-status connect-status-error';
+    resultEl.textContent = 'Failed: ' + err.message;
+  }
+}
+</script>
 </body>
 </html>
