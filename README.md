@@ -101,9 +101,9 @@ Click **Profiles** in the connect section to open the profiles panel. Save your 
 
 Choose between diffing **All collections** (default) or **Only selected** collections. The "Only selected" mode shows a transfer list of available collections fetched from your database — move collections between "Available" and "Selected" panes.
 
-#### Copy Document IDs
+#### Sync History
 
-Click **Copy IDs** to copy the `_id` values of all selected operations to your clipboard, grouped by collection. Useful for quick lookups or sharing with teammates.
+Every successful sync is logged automatically. Switch to the **History** tab to see a timeline of past syncs. Expand any entry to see a field-level diff report showing exactly what changed (source vs target values). Each entry also has a **Copy IDs** button that copies affected document IDs grouped by collection — handy for pasting into PR descriptions so your team knows which documents were modified on staging.
 
 ### Docker
 
