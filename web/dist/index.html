@@ -116,6 +116,47 @@
     .checkbox-row label { font-size: 0.85rem; cursor: pointer; margin: 0; text-transform: none; letter-spacing: 0; }
     .checkbox-hint { color: var(--text-dim); font-size: 0.78rem; }
 
+    .collection-mode { display: flex; gap: 12px; margin-bottom: 12px; }
+    .collection-mode label {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border-radius: 6px; cursor: pointer;
+      font-size: 0.8rem; border: 1px solid var(--border);
+      background: var(--bg-tertiary); transition: all 0.2s;
+    }
+    .collection-mode input[type="radio"] { accent-color: var(--accent); }
+    .collection-mode label.active {
+      background: var(--accent); color: #fff; border-color: var(--accent);
+    }
+    .transfer-list { display: flex; gap: 8px; margin-top: 8px; }
+    .transfer-pane {
+      flex: 1; background: var(--input-bg); border: 1px solid var(--border);
+      border-radius: 6px; padding: 8px; min-height: 140px; max-height: 200px; overflow-y: auto;
+    }
+    .transfer-pane-header {
+      font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: 0.5px; margin-bottom: 6px;
+    }
+    .transfer-item {
+      padding: 4px 8px; border-radius: 4px; cursor: pointer;
+      font-size: 0.8rem; margin-bottom: 2px; transition: background 0.15s;
+    }
+    .transfer-item:hover { background: var(--bg-hover); }
+    .transfer-pane.selected .transfer-item {
+      background: rgba(108,140,255,0.12); border: 1px solid rgba(108,140,255,0.25);
+    }
+    .transfer-arrows {
+      display: flex; flex-direction: column; justify-content: center; gap: 4px;
+    }
+    .transfer-arrows button {
+      background: var(--bg-tertiary); border: 1px solid var(--border);
+      color: var(--accent); padding: 6px 10px; border-radius: 4px;
+      cursor: pointer; font-size: 14px; transition: all 0.15s;
+    }
+    .transfer-arrows button:hover { border-color: var(--accent); background: var(--bg-hover); }
+    .collection-picker-status {
+      font-size: 0.75rem; color: var(--text-muted); margin-top: 6px;
+    }
+
     .connect-actions { display: flex; gap: 8px; margin-top: 20px; }
     .btn {
       padding: 9px 20px; border-radius: 8px; border: none; cursor: pointer;
@@ -422,14 +463,32 @@
       </div>
     </div>
 
-    <div class="form-row-2">
-      <div class="form-group">
-        <label>Include collections</label>
-        <input type="text" id="include" placeholder="Leave empty for all">
+    <div class="form-group">
+      <label>Collections</label>
+      <div class="collection-mode">
+        <label id="modeAll" class="active" onclick="setCollectionMode('all')">
+          <input type="radio" name="collMode" checked> All collections
+        </label>
+        <label id="modeSelected" onclick="setCollectionMode('selected')">
+          <input type="radio" name="collMode"> Only selected
+        </label>
       </div>
-      <div class="form-group">
-        <label>Exclude collections</label>
-        <input type="text" id="exclude" placeholder="sessions,logs">
+      <div id="collectionPicker" class="hidden">
+        <div class="transfer-list">
+          <div class="transfer-pane" id="availablePane">
+            <div class="transfer-pane-header">Available</div>
+            <div id="availableList"></div>
+          </div>
+          <div class="transfer-arrows">
+            <button onclick="transferSelected('right')" title="Add all">&#8594;</button>
+            <button onclick="transferSelected('left')" title="Remove all">&#8592;</button>
+          </div>
+          <div class="transfer-pane selected" id="selectedPane">
+            <div class="transfer-pane-header">Selected</div>
+            <div id="selectedList"></div>
+          </div>
+        </div>
+        <div class="collection-picker-status" id="collPickerStatus"></div>
       </div>
     </div>
 
@@ -619,6 +678,131 @@ function updateDatabaseDropdown() {
   if (prev && common.includes(prev)) select.value = prev;
 }
 
+// ─── Collection Picker ───
+let collectionMode = 'all';
+let availableCollections = [];
+let selectedCollections = [];
+
+function setCollectionMode(mode) {
+  collectionMode = mode;
+  document.getElementById('modeAll').classList.toggle('active', mode === 'all');
+  document.getElementById('modeSelected').classList.toggle('active', mode === 'selected');
+  document.getElementById('modeAll').querySelector('input').checked = mode === 'all';
+  document.getElementById('modeSelected').querySelector('input').checked = mode === 'selected';
+  document.getElementById('collectionPicker').classList.toggle('hidden', mode === 'all');
+  if (mode === 'selected' && availableCollections.length === 0 && selectedCollections.length === 0) {
+    fetchCollections();
+  }
+}
+
+async function fetchCollections() {
+  const db = document.getElementById('database').value;
+  if (!db) return;
+
+  const sourceURI = document.getElementById('source').value.trim();
+  const targetURI = document.getElementById('target').value.trim();
+  const timeout = parseInt(document.getElementById('timeout').value) || 10;
+  const sourceToTarget = document.getElementById('sourceToTarget').checked;
+
+  document.getElementById('collPickerStatus').textContent = 'Loading collections...';
+
+  try {
+    const sourceRes = await fetch('/api/collections', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uri: sourceURI, database: db, timeout })
+    });
+    const sourceData = await sourceRes.json();
+
+    let allColls = sourceData.collections || [];
+
+    if (!sourceToTarget && targetURI) {
+      const targetRes = await fetch('/api/collections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uri: targetURI, database: db, timeout })
+      });
+      const targetData = await targetRes.json();
+      const targetColls = targetData.collections || [];
+      const set = new Set([...allColls, ...targetColls]);
+      allColls = [...set].sort();
+    } else {
+      allColls.sort();
+    }
+
+    const currentSelected = new Set(selectedCollections);
+    selectedCollections = allColls.filter(c => currentSelected.has(c));
+    availableCollections = allColls.filter(c => !currentSelected.has(c));
+
+    renderTransferList();
+    document.getElementById('collPickerStatus').textContent =
+      allColls.length + ' collection' + (allColls.length !== 1 ? 's' : '') + ' found';
+  } catch (err) {
+    document.getElementById('collPickerStatus').textContent = 'Failed to load collections';
+  }
+}
+
+function renderTransferList() {
+  const avail = document.getElementById('availableList');
+  const sel = document.getElementById('selectedList');
+
+  avail.replaceChildren();
+  availableCollections.forEach(function(c) {
+    var div = document.createElement('div');
+    div.className = 'transfer-item';
+    div.textContent = c;
+    div.addEventListener('click', function() { moveCollection(c, 'right'); });
+    avail.appendChild(div);
+  });
+
+  sel.replaceChildren();
+  selectedCollections.forEach(function(c) {
+    var div = document.createElement('div');
+    div.className = 'transfer-item';
+    div.textContent = c;
+    div.addEventListener('click', function() { moveCollection(c, 'left'); });
+    sel.appendChild(div);
+  });
+}
+
+function moveCollection(name, direction) {
+  if (direction === 'right') {
+    availableCollections = availableCollections.filter(function(c) { return c !== name; });
+    selectedCollections.push(name);
+    selectedCollections.sort();
+  } else {
+    selectedCollections = selectedCollections.filter(function(c) { return c !== name; });
+    availableCollections.push(name);
+    availableCollections.sort();
+  }
+  renderTransferList();
+}
+
+function transferSelected(direction) {
+  if (direction === 'right') {
+    selectedCollections = selectedCollections.concat(availableCollections).sort();
+    availableCollections = [];
+  } else {
+    availableCollections = availableCollections.concat(selectedCollections).sort();
+    selectedCollections = [];
+  }
+  renderTransferList();
+}
+
+document.getElementById('sourceToTarget').addEventListener('change', function() {
+  if (collectionMode === 'selected') {
+    fetchCollections();
+  }
+});
+
+document.getElementById('database').addEventListener('change', function() {
+  availableCollections = [];
+  selectedCollections = [];
+  if (collectionMode === 'selected') {
+    fetchCollections();
+  }
+});
+
 // ─── Form Data ───
 function getFormData() {
   const data = {
@@ -627,11 +811,10 @@ function getFormData() {
     database: document.getElementById('database').value,
     timeout: parseInt(document.getElementById('timeout').value) || 30,
   };
-  const include = document.getElementById('include').value.trim();
-  const exclude = document.getElementById('exclude').value.trim();
+  if (collectionMode === 'selected' && selectedCollections.length > 0) {
+    data.include = selectedCollections;
+  }
   const ignore = document.getElementById('ignoreFields').value.trim();
-  if (include) data.include = include.split(',').map(s => s.trim());
-  if (exclude) data.exclude = exclude.split(',').map(s => s.trim());
   if (ignore) data.ignoreFields = ignore.split(',').map(s => s.trim());
   data.sourceToTarget = document.getElementById('sourceToTarget').checked;
   return data;
