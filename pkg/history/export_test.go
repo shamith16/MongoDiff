@@ -13,11 +13,18 @@ func testEntry() Entry {
 		Source:    "localhost:27017",
 		Target:    "staging.example.com:27017",
 		Database:  "myapp",
-		Summary:   Summary{Inserted: 2, Replaced: 1, Deleted: 1},
+		Summary:   Summary{Inserted: 1, Replaced: 1, Deleted: 1},
 		Operations: []Operation{
 			{Collection: "users", DocID: "664b1234a1b0", Type: "insert"},
-			{Collection: "users", DocID: "664b5678c2d3", Type: "insert"},
-			{Collection: "users", DocID: "664c9012e4f5", Type: "replace"},
+			{
+				Collection: "users",
+				DocID:      "664c9012e4f5",
+				Type:       "replace",
+				Fields: []FieldChange{
+					{Path: "name", OldValue: `"Alice"`, NewValue: `"Bob"`},
+					{Path: "age", OldValue: "25", NewValue: "30"},
+				},
+			},
 			{Collection: "orders", DocID: "664d3456a7b8", Type: "delete"},
 		},
 		BackupPath: ".mongodiff/backups/2026-03-10T14-30-00Z.json",
@@ -28,25 +35,62 @@ func TestExportMarkdown_Content(t *testing.T) {
 	md := ExportMarkdown([]Entry{testEntry()})
 
 	checks := []string{
-		"# Migration Guide",
+		"# Sync Report",
 		"localhost:27017",
 		"staging.example.com:27017",
 		"myapp",
-		"## users (3 operation",
-		"**Inserted:**",
+		"## users",
 		"664b1234a1b0",
-		"**Replaced:**",
+		"insert",
 		"664c9012e4f5",
-		"## orders (1 operation)",
-		"**Deleted:**",
+		"replace",
+		"| Field | Source | Target |",
+		"| `name` |",
+		`"Alice"`,
+		`"Bob"`,
+		"| `age` |",
+		"25",
+		"30",
+		"## orders",
 		"664d3456a7b8",
-		"2 inserted, 1 replaced, 1 deleted",
+		"delete",
+		"1 inserted, 1 replaced, 1 deleted",
 	}
 
 	for _, check := range checks {
 		if !strings.Contains(md, check) {
 			t.Errorf("markdown missing: %q\n\nGot:\n%s", check, md)
 		}
+	}
+}
+
+func TestExportMarkdown_InsertNoFields(t *testing.T) {
+	e := Entry{
+		ID:       "x",
+		Database: "db",
+		Operations: []Operation{
+			{Collection: "c", DocID: "id1", Type: "insert"},
+		},
+		Summary: Summary{Inserted: 1},
+	}
+	md := ExportMarkdown([]Entry{e})
+	if !strings.Contains(md, "New document inserted from source") {
+		t.Error("expected insert placeholder text")
+	}
+}
+
+func TestExportMarkdown_DeleteNoFields(t *testing.T) {
+	e := Entry{
+		ID:       "x",
+		Database: "db",
+		Operations: []Operation{
+			{Collection: "c", DocID: "id1", Type: "delete"},
+		},
+		Summary: Summary{Deleted: 1},
+	}
+	md := ExportMarkdown([]Entry{e})
+	if !strings.Contains(md, "Document deleted from target") {
+		t.Error("expected delete placeholder text")
 	}
 }
 
@@ -58,7 +102,7 @@ func TestExportMarkdown_MultipleEntries(t *testing.T) {
 
 	md := ExportMarkdown([]Entry{e1, e2})
 
-	if strings.Count(md, "# Migration Guide") != 1 {
+	if strings.Count(md, "# Sync Report") != 1 {
 		t.Error("expected single header")
 	}
 	if !strings.Contains(md, "myapp") || !strings.Contains(md, "other") {
@@ -68,60 +112,30 @@ func TestExportMarkdown_MultipleEntries(t *testing.T) {
 
 func TestExportMarkdown_Empty(t *testing.T) {
 	md := ExportMarkdown([]Entry{})
-	if !strings.Contains(md, "# Migration Guide") {
+	if !strings.Contains(md, "# Sync Report") {
 		t.Error("expected header even with no entries")
 	}
 }
 
-func TestExportMongosh_Content(t *testing.T) {
-	script := ExportMongosh([]Entry{testEntry()})
-
-	checks := []string{
-		"use(\"myapp\")",
-		"db.users.insertOne(",
-		"db.users.replaceOne(",
-		"db.orders.deleteOne(",
-	}
-
-	for _, check := range checks {
-		if !strings.Contains(script, check) {
-			t.Errorf("mongosh missing: %q\n\nGot:\n%s", check, script)
-		}
-	}
-}
-
-func TestExportMongosh_DeletesHaveNoTODO(t *testing.T) {
+func TestExportMarkdown_FieldAbsentValues(t *testing.T) {
 	e := Entry{
 		ID:       "x",
 		Database: "db",
 		Operations: []Operation{
-			{Collection: "c", DocID: "664d3456a7b80000abcdef12", Type: "delete"},
+			{
+				Collection: "c",
+				DocID:      "id1",
+				Type:       "replace",
+				Fields: []FieldChange{
+					{Path: "newField", NewValue: `"hello"`},
+					{Path: "removedField", OldValue: "42"},
+				},
+			},
 		},
+		Summary: Summary{Replaced: 1},
 	}
-	script := ExportMongosh([]Entry{e})
-
-	if strings.Contains(script, "TODO") {
-		t.Error("delete operations should not have TODO comments")
-	}
-	if !strings.Contains(script, "deleteOne") {
-		t.Error("expected deleteOne")
-	}
-}
-
-func TestExportMongosh_NonObjectID(t *testing.T) {
-	e := Entry{
-		ID:       "x",
-		Database: "db",
-		Operations: []Operation{
-			{Collection: "c", DocID: "short", Type: "delete"},
-		},
-	}
-	script := ExportMongosh([]Entry{e})
-
-	if strings.Contains(script, "ObjectId") {
-		t.Error("short IDs should not be wrapped in ObjectId")
-	}
-	if !strings.Contains(script, "\"short\"") {
-		t.Error("expected quoted string ID")
+	md := ExportMarkdown([]Entry{e})
+	if !strings.Contains(md, "_(absent)_") {
+		t.Error("expected absent marker for missing values")
 	}
 }

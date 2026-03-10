@@ -12,11 +12,19 @@ import (
 	"time"
 )
 
+// FieldChange records a single field-level change within a document.
+type FieldChange struct {
+	Path     string `json:"path"`
+	OldValue string `json:"oldValue,omitempty"`
+	NewValue string `json:"newValue,omitempty"`
+}
+
 // Operation records a single document-level sync action.
 type Operation struct {
-	Collection string      `json:"collection"`
-	DocID      interface{} `json:"docId"`
-	Type       string      `json:"type"` // "insert", "replace", "delete"
+	Collection string        `json:"collection"`
+	DocID      interface{}   `json:"docId"`
+	Type       string        `json:"type"` // "insert", "replace", "delete"
+	Fields     []FieldChange `json:"fields,omitempty"`
 }
 
 // Summary holds aggregate counts for an entry.

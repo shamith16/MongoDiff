@@ -5,10 +5,10 @@ import (
 	"strings"
 )
 
-// ExportMarkdown generates a human-readable migration guide from entries.
+// ExportMarkdown generates a human-readable diff report from entries.
 func ExportMarkdown(entries []Entry) string {
 	var b strings.Builder
-	b.WriteString("# Migration Guide\n\n")
+	b.WriteString("# Sync Report\n\n")
 
 	for _, e := range entries {
 		b.WriteString(fmt.Sprintf("**Applied:** %s\n", e.Timestamp.Format("January 2, 2006 at 3:04 PM")))
@@ -17,17 +17,30 @@ func ExportMarkdown(entries []Entry) string {
 
 		groups := groupByCollection(e.Operations)
 		for _, g := range groups {
-			b.WriteString(fmt.Sprintf("## %s (%d operation%s)\n", g.name, g.total, plural(g.total)))
-			if len(g.inserts) > 0 {
-				b.WriteString("- **Inserted:** " + formatIDs(g.inserts) + "\n")
+			b.WriteString(fmt.Sprintf("## %s\n\n", g.name))
+			for _, op := range g.ops {
+				b.WriteString(fmt.Sprintf("### `%v` — %s\n\n", op.DocID, op.Type))
+				if len(op.Fields) > 0 {
+					b.WriteString("| Field | Source | Target |\n")
+					b.WriteString("|-------|--------|--------|\n")
+					for _, f := range op.Fields {
+						old := f.OldValue
+						if old == "" {
+							old = "_(absent)_"
+						}
+						new := f.NewValue
+						if new == "" {
+							new = "_(absent)_"
+						}
+						b.WriteString(fmt.Sprintf("| `%s` | %s | %s |\n", f.Path, old, new))
+					}
+					b.WriteString("\n")
+				} else if op.Type == "insert" {
+					b.WriteString("_New document inserted from source_\n\n")
+				} else if op.Type == "delete" {
+					b.WriteString("_Document deleted from target_\n\n")
+				}
 			}
-			if len(g.replaces) > 0 {
-				b.WriteString("- **Replaced:** " + formatIDs(g.replaces) + "\n")
-			}
-			if len(g.deletes) > 0 {
-				b.WriteString("- **Deleted:** " + formatIDs(g.deletes) + "\n")
-			}
-			b.WriteString("\n")
 		}
 
 		b.WriteString("---\n")
@@ -42,46 +55,9 @@ func ExportMarkdown(entries []Entry) string {
 	return b.String()
 }
 
-// ExportMongosh generates a mongosh script from entries.
-// Delete operations are fully executable. Insert/replace operations include
-// TODO comments since the log stores IDs only, not full document data.
-func ExportMongosh(entries []Entry) string {
-	var b strings.Builder
-	b.WriteString("// mongodiff migration script\n")
-
-	for _, e := range entries {
-		b.WriteString(fmt.Sprintf("// Applied: %s\n", e.Timestamp.Format("2006-01-02T15:04:05Z")))
-		b.WriteString(fmt.Sprintf("// Source: %s → Target: %s\n\n", e.Source, e.Target))
-		b.WriteString(fmt.Sprintf("use(\"%s\");\n\n", e.Database))
-
-		groups := groupByCollection(e.Operations)
-		for _, g := range groups {
-			b.WriteString(fmt.Sprintf("// --- %s ---\n", g.name))
-			for _, id := range g.inserts {
-				b.WriteString(fmt.Sprintf("db.%s.insertOne({_id: %s, /* TODO: fetch document from source */});\n",
-					g.name, formatMongoshID(id)))
-			}
-			for _, id := range g.replaces {
-				b.WriteString(fmt.Sprintf("db.%s.replaceOne({_id: %s}, {/* TODO: fetch document from source */});\n",
-					g.name, formatMongoshID(id)))
-			}
-			for _, id := range g.deletes {
-				b.WriteString(fmt.Sprintf("db.%s.deleteOne({_id: %s});\n",
-					g.name, formatMongoshID(id)))
-			}
-			b.WriteString("\n")
-		}
-	}
-
-	return b.String()
-}
-
 type collectionGroup struct {
-	name     string
-	inserts  []interface{}
-	replaces []interface{}
-	deletes  []interface{}
-	total    int
+	name string
+	ops  []Operation
 }
 
 func groupByCollection(ops []Operation) []collectionGroup {
@@ -95,49 +71,7 @@ func groupByCollection(ops []Operation) []collectionGroup {
 			orderMap[op.Collection] = idx
 			groups = append(groups, collectionGroup{name: op.Collection})
 		}
-		g := &groups[idx]
-		switch op.Type {
-		case "insert":
-			g.inserts = append(g.inserts, op.DocID)
-		case "replace":
-			g.replaces = append(g.replaces, op.DocID)
-		case "delete":
-			g.deletes = append(g.deletes, op.DocID)
-		}
-		g.total++
+		groups[idx].ops = append(groups[idx].ops, op)
 	}
 	return groups
-}
-
-func formatIDs(ids []interface{}) string {
-	strs := make([]string, len(ids))
-	for i, id := range ids {
-		strs[i] = fmt.Sprintf("`%v`", id)
-	}
-	return strings.Join(strs, ", ")
-}
-
-func formatMongoshID(id interface{}) string {
-	s := fmt.Sprintf("%v", id)
-	// 24-char hex strings are likely ObjectIds
-	if len(s) == 24 && isHex(s) {
-		return fmt.Sprintf("ObjectId(\"%s\")", s)
-	}
-	return fmt.Sprintf("\"%s\"", s)
-}
-
-func isHex(s string) bool {
-	for _, c := range s {
-		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
-			return false
-		}
-	}
-	return true
-}
-
-func plural(n int) string {
-	if n == 1 {
-		return ""
-	}
-	return "s"
 }

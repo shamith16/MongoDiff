@@ -331,11 +331,22 @@ func (s *Server) handleSync(w http.ResponseWriter, r *http.Request) {
 				opType = "delete"
 			}
 			if opType != "" {
-				entry.Operations = append(entry.Operations, history.Operation{
+				op := history.Operation{
 					Collection: coll.Name,
 					DocID:      doc.ID,
 					Type:       opType,
-				})
+				}
+				for _, f := range doc.Fields {
+					fc := history.FieldChange{Path: f.Path}
+					if f.OldValue != nil {
+						fc.OldValue = diff.FormatValue(f.OldValue)
+					}
+					if f.NewValue != nil {
+						fc.NewValue = diff.FormatValue(f.NewValue)
+					}
+					op.Fields = append(op.Fields, fc)
+				}
+				entry.Operations = append(entry.Operations, op)
 			}
 		}
 	}
@@ -560,8 +571,8 @@ func (s *Server) handleExportHistory(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "source and target are required")
 		return
 	}
-	if req.Format != "markdown" && req.Format != "mongosh" {
-		writeError(w, http.StatusBadRequest, "format must be 'markdown' or 'mongosh'")
+	if req.Format != "markdown" {
+		writeError(w, http.StatusBadRequest, "format must be 'markdown'")
 		return
 	}
 
@@ -585,13 +596,7 @@ func (s *Server) handleExportHistory(w http.ResponseWriter, r *http.Request) {
 		entries = filtered
 	}
 
-	var text string
-	switch req.Format {
-	case "markdown":
-		text = history.ExportMarkdown(entries)
-	case "mongosh":
-		text = history.ExportMongosh(entries)
-	}
+	text := history.ExportMarkdown(entries)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{"text": text})

@@ -176,13 +176,15 @@ func TestHandleExportHistory_InvalidFormat(t *testing.T) {
 	s := New(3000)
 	s.historyDir = t.TempDir()
 
-	body, _ := json.Marshal(map[string]string{"source": "mongodb://s", "target": "mongodb://t", "format": "csv"})
-	req := httptest.NewRequest("POST", "/api/history/export", bytes.NewReader(body))
-	w := httptest.NewRecorder()
-	s.handleExportHistory(w, req)
+	for _, format := range []string{"csv", "mongosh"} {
+		body, _ := json.Marshal(map[string]string{"source": "mongodb://s", "target": "mongodb://t", "format": format})
+		req := httptest.NewRequest("POST", "/api/history/export", bytes.NewReader(body))
+		w := httptest.NewRecorder()
+		s.handleExportHistory(w, req)
 
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("expected 400, got %d", w.Code)
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("format %q: expected 400, got %d", format, w.Code)
+		}
 	}
 }
 
