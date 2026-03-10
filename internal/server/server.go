@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"net/http"
 
+	"github.com/shamith/mongodiff/pkg/history"
 	"github.com/shamith/mongodiff/pkg/profile"
 	"github.com/shamith/mongodiff/web"
 )
@@ -14,11 +15,12 @@ type Server struct {
 	port        int
 	mux         *http.ServeMux
 	profilePath string
+	historyDir  string
 }
 
 // New creates a new Server.
 func New(port int) *Server {
-	s := &Server{port: port, mux: http.NewServeMux(), profilePath: profile.DefaultPath()}
+	s := &Server{port: port, mux: http.NewServeMux(), profilePath: profile.DefaultPath(), historyDir: history.DefaultDir()}
 	s.setupRoutes()
 	return s
 }
@@ -41,6 +43,8 @@ func (s *Server) setupRoutes() {
 	s.mux.HandleFunc("GET /api/profiles", s.handleGetProfiles)
 	s.mux.HandleFunc("POST /api/profiles", s.handleSaveProfile)
 	s.mux.HandleFunc("DELETE /api/profiles/{name}", s.handleDeleteProfile)
+	s.mux.HandleFunc("POST /api/history", s.handleGetHistory)
+	s.mux.HandleFunc("POST /api/history/export", s.handleExportHistory)
 
 	// Serve embedded static assets
 	distFS, err := fs.Sub(web.Assets, "dist")

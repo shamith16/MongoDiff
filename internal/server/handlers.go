@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/shamith/mongodiff/pkg/diff"
+	"github.com/shamith/mongodiff/pkg/history"
 	"github.com/shamith/mongodiff/pkg/profile"
 	mongoclient "github.com/shamith/mongodiff/pkg/mongo"
 	"github.com/shamith/mongodiff/pkg/output"
@@ -40,6 +41,18 @@ type listCollectionsRequest struct {
 type syncRequest struct {
 	diffRequest
 	Operations []syncer.SyncOperation `json:"operations,omitempty"`
+}
+
+type historyRequest struct {
+	Source string `json:"source"`
+	Target string `json:"target"`
+}
+
+type historyExportRequest struct {
+	Source   string   `json:"source"`
+	Target   string   `json:"target"`
+	EntryIDs []string `json:"entryIds"`
+	Format   string   `json:"format"`
 }
 
 type errorResponse struct {
@@ -448,6 +461,74 @@ func (s *Server) handleListCollections(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{"collections": collections})
+}
+
+func (s *Server) handleGetHistory(w http.ResponseWriter, r *http.Request) {
+	var req historyRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if req.Source == "" || req.Target == "" {
+		writeError(w, http.StatusBadRequest, "source and target are required")
+		return
+	}
+
+	entries, err := history.Load(s.historyDir, mongoclient.RedactURI(req.Source), mongoclient.RedactURI(req.Target))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load history: "+err.Error())
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"entries": entries})
+}
+
+func (s *Server) handleExportHistory(w http.ResponseWriter, r *http.Request) {
+	var req historyExportRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if req.Source == "" || req.Target == "" {
+		writeError(w, http.StatusBadRequest, "source and target are required")
+		return
+	}
+	if req.Format != "markdown" && req.Format != "mongosh" {
+		writeError(w, http.StatusBadRequest, "format must be 'markdown' or 'mongosh'")
+		return
+	}
+
+	entries, err := history.Load(s.historyDir, mongoclient.RedactURI(req.Source), mongoclient.RedactURI(req.Target))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load history: "+err.Error())
+		return
+	}
+
+	if len(req.EntryIDs) > 0 {
+		idSet := make(map[string]bool, len(req.EntryIDs))
+		for _, id := range req.EntryIDs {
+			idSet[id] = true
+		}
+		var filtered []history.Entry
+		for _, e := range entries {
+			if idSet[e.ID] {
+				filtered = append(filtered, e)
+			}
+		}
+		entries = filtered
+	}
+
+	var text string
+	switch req.Format {
+	case "markdown":
+		text = history.ExportMarkdown(entries)
+	case "mongosh":
+		text = history.ExportMongosh(entries)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"text": text})
 }
 
 func writeError(w http.ResponseWriter, status int, message string) {

@@ -138,6 +138,74 @@ func TestWriteError(t *testing.T) {
 	}
 }
 
+func TestHandleGetHistory_MissingFields(t *testing.T) {
+	s := New(3000)
+	s.historyDir = t.TempDir()
+
+	body, _ := json.Marshal(map[string]string{"source": "mongodb://s"})
+	req := httptest.NewRequest("POST", "/api/history", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+	s.handleGetHistory(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestHandleGetHistory_Empty(t *testing.T) {
+	s := New(3000)
+	s.historyDir = t.TempDir()
+
+	body, _ := json.Marshal(map[string]string{"source": "mongodb://s", "target": "mongodb://t"})
+	req := httptest.NewRequest("POST", "/api/history", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+	s.handleGetHistory(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+
+	var resp map[string][]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	if len(resp["entries"]) != 0 {
+		t.Errorf("expected 0 entries, got %d", len(resp["entries"]))
+	}
+}
+
+func TestHandleExportHistory_InvalidFormat(t *testing.T) {
+	s := New(3000)
+	s.historyDir = t.TempDir()
+
+	body, _ := json.Marshal(map[string]string{"source": "mongodb://s", "target": "mongodb://t", "format": "csv"})
+	req := httptest.NewRequest("POST", "/api/history/export", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+	s.handleExportHistory(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestHandleExportHistory_Markdown(t *testing.T) {
+	s := New(3000)
+	s.historyDir = t.TempDir()
+
+	body, _ := json.Marshal(map[string]string{"source": "mongodb://s", "target": "mongodb://t", "format": "markdown"})
+	req := httptest.NewRequest("POST", "/api/history/export", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+	s.handleExportHistory(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+
+	var resp map[string]string
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	if resp["text"] == "" {
+		t.Error("expected non-empty text")
+	}
+}
+
 func TestRoutes_Exist(t *testing.T) {
 	s := New(3000)
 
@@ -155,6 +223,8 @@ func TestRoutes_Exist(t *testing.T) {
 		{"GET", "/api/profiles"},
 		{"POST", "/api/profiles"},
 		{"DELETE", "/api/profiles/test"},
+		{"POST", "/api/history"},
+		{"POST", "/api/history/export"},
 		{"GET", "/"},
 	}
 
