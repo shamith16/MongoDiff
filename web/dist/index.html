@@ -384,7 +384,7 @@
   </div>
   <div class="nav-right">
     <span class="nav-version">v0.2.0</span>
-    <button class="theme-btn" onclick="toggleTheme()" title="Toggle theme">Theme</button>
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">Light</button>
   </div>
 </nav>
 
@@ -481,7 +481,6 @@
       <div class="content-header-right">
         <span class="selection-counter" id="selectionCounter"></span>
         <button class="btn btn-sm btn-secondary" id="btnCopyIds" onclick="copyIds()">Copy IDs</button>
-        <button class="btn btn-sm btn-secondary" id="btnDownloadScript" onclick="downloadScript()">Download Script</button>
         <button class="btn btn-sm btn-secondary" id="btnDownload" onclick="downloadJSON()">Download JSON</button>
         <button class="btn btn-sm btn-sync" id="btnApplySelected" onclick="showSyncModal()">Apply Selected</button>
       </div>
@@ -529,15 +528,21 @@ let activeFilter = 'all';  // 'all' or collection name
 let collectionStats = {};  // { name: { insert, modify, delete } }
 
 // ─── Theme ───
+function updateThemeBtn() {
+  const current = document.documentElement.getAttribute('data-theme');
+  document.getElementById('themeBtn').textContent = current === 'dark' ? 'Light' : 'Dark';
+}
 function toggleTheme() {
   const html = document.documentElement;
   const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
   html.setAttribute('data-theme', next);
   localStorage.setItem('mongodiff-theme', next);
+  updateThemeBtn();
 }
 (function() {
   const saved = localStorage.getItem('mongodiff-theme');
   if (saved) document.documentElement.setAttribute('data-theme', saved);
+  updateThemeBtn();
 })();
 
 // ─── Page Navigation ───
@@ -1221,272 +1226,6 @@ function showToast(msg) {
   toast.style.opacity = '1';
   if (toastTimer) clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { toast.style.opacity = '0'; }, 2000);
-}
-
-// ─── Download Script ───
-function downloadScript() {
-  const selected = getSelectedOps();
-  if (selected.length === 0) return;
-  const dbName = lastDiffData.database || 'test';
-
-  const ops = [];
-  for (const op of selected) {
-    const entry = { collection: op.collection, type: op.type, docId: op.docId };
-    if (op.type === 'insert') {
-      entry.source = op.source;
-    } else if (op.type === 'modify') {
-      entry.source = op.source;
-      entry.target = op.target;
-    } else if (op.type === 'delete') {
-      entry.target = op.target;
-    }
-    ops.push(entry);
-  }
-
-  // Check for collection-level ops
-  if (lastDiffData && lastDiffData.collections) {
-    for (const coll of lastDiffData.collections) {
-      if (coll.diffType === 'removed') {
-        const hasSelectedFromColl = selected.some(op => op.collection === coll.name);
-        if (hasSelectedFromColl || (!coll.documents || coll.documents.length === 0)) {
-          ops.push({ collection: coll.name, type: 'collection_drop' });
-        }
-      }
-    }
-  }
-
-  const script = generateMongoshScript(dbName, ops);
-  const blob = new Blob([script], { type: 'application/javascript' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-  a.download = 'mongodiff-apply-' + dbName + '-' + ts + '.js';
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function generateMongoshScript(dbName, ops) {
-  const opsJSON = JSON.stringify(ops, null, 2);
-
-  const counts = { insert: 0, modify: 0, delete: 0, collection_drop: 0 };
-  for (const op of ops) counts[op.type] = (counts[op.type] || 0) + 1;
-  const countParts = [];
-  if (counts.insert) countParts.push(counts.insert + ' insert');
-  if (counts.modify) countParts.push(counts.modify + ' modify');
-  if (counts.delete) countParts.push(counts.delete + ' delete');
-  if (counts.collection_drop) countParts.push(counts.collection_drop + ' collection drop');
-  const countSummary = countParts.join(', ');
-
-  return `// ═══════════════════════════════════════════════════════════════
-// mongodiff apply script
-// Generated: ${new Date().toISOString()}
-// Database: ${dbName}
-// Operations: ${ops.length} (${countSummary})
-//
-// Usage:
-//   1. Replace CONNECTION_STRING below with your target MongoDB URI
-//   2. Set DRY_RUN to false when ready to apply
-//   3. Run: mongosh --file <this-file>.js
-// ═══════════════════════════════════════════════════════════════
-
-// ─── Configuration ───
-const CONNECTION_STRING = "mongodb://localhost:27017";
-const DATABASE = ${JSON.stringify(dbName)};
-const DRY_RUN = true;
-
-// ─── Operations Data ───
-const OPERATIONS = ${opsJSON};
-
-// ─── Helpers ───
-function log(icon, msg) { print(icon + " " + msg); }
-
-function deepEqual(a, b) {
-  if (a === b) return true;
-  if (a == null || b == null) return a == b;
-  if (typeof a !== typeof b) return false;
-  if (typeof a !== "object") return false;
-  if (Array.isArray(a) !== Array.isArray(b)) return false;
-  const keysA = Object.keys(a).sort();
-  const keysB = Object.keys(b).sort();
-  if (keysA.length !== keysB.length) return false;
-  for (let i = 0; i < keysA.length; i++) {
-    if (keysA[i] !== keysB[i]) return false;
-    if (!deepEqual(a[keysA[i]], b[keysB[i]])) return false;
-  }
-  return true;
-}
-
-function getNestedValue(obj, path) {
-  const parts = path.split(".");
-  let cur = obj;
-  for (const p of parts) {
-    if (cur == null || typeof cur !== "object") return undefined;
-    cur = cur[p];
-  }
-  return cur;
-}
-
-function restoreId(val) {
-  if (typeof val === "string" && /^[0-9a-fA-F]{24}$/.test(val)) {
-    return ObjectId(val);
-  }
-  return val;
-}
-
-// Restore ObjectId types in operations data
-for (const op of OPERATIONS) {
-  if (op.docId != null) op.docId = restoreId(op.docId);
-  if (op.source && op.source._id != null) op.source._id = restoreId(op.source._id);
-  if (op.target && op.target._id != null) op.target._id = restoreId(op.target._id);
-  if (op.documents) {
-    for (const doc of op.documents) {
-      if (doc._id != null) doc._id = restoreId(doc._id);
-    }
-  }
-}
-
-// ─── Pre-flight Validation ───
-function preflight(db) {
-  print("");
-  print("── Pre-flight validation ──");
-  const errors = [];
-  const checked = {};
-  const collectionNames = db.getCollectionNames();
-
-  for (const op of OPERATIONS) {
-    if (op.type === "collection_drop") {
-      if (!collectionNames.includes(op.collection)) {
-        errors.push(op.collection + ": collection does not exist for drop");
-        log("✗", op.collection + ": collection does not exist for drop");
-      } else {
-        log("✓", op.collection + ": collection exists for drop");
-      }
-      continue;
-    }
-
-    if (op.type === "insert") continue;
-
-    // modify or delete: check document exists and hasn't drifted
-    const coll = db.getCollection(op.collection);
-    const live = coll.findOne({ _id: op.docId });
-
-    if (!live) {
-      errors.push(op.collection + ": document " + op.docId + " not found");
-      log("✗", op.collection + ": document " + op.docId + " not found");
-      continue;
-    }
-
-    // Drift detection: compare target snapshot fields against live document
-    if (op.target) {
-      const drifted = [];
-      for (const [key, expected] of Object.entries(op.target)) {
-        if (key === "_id") continue;
-        const liveVal = getNestedValue(live, key);
-        if (!deepEqual(liveVal, expected)) {
-          drifted.push(key);
-        }
-      }
-      if (drifted.length > 0) {
-        const msg = op.collection + ": document " + op.docId + " drifted on fields: " + drifted.join(", ");
-        errors.push(msg);
-        log("✗", msg);
-        continue;
-      }
-    }
-
-    if (!checked[op.collection]) checked[op.collection] = { ok: 0, total: 0 };
-    checked[op.collection].ok++;
-    checked[op.collection].total++;
-  }
-
-  // Log success counts per collection
-  for (const [name, c] of Object.entries(checked)) {
-    log("✓", name + ": " + c.ok + "/" + c.total + " documents verified");
-  }
-
-  return errors;
-}
-
-// ─── Apply Phase ───
-function apply(db) {
-  print("");
-  print("── Applying changes ──");
-
-  let succeeded = 0;
-  let failed = 0;
-  const failedOps = [];
-
-  for (const op of OPERATIONS) {
-    try {
-      const coll = db.getCollection(op.collection);
-
-      if (op.type === "insert") {
-        coll.insertOne(op.source);
-        log("✓", op.collection + ": inserted " + op.source._id);
-        succeeded++;
-      } else if (op.type === "modify") {
-        const replacement = Object.assign({}, op.source);
-        delete replacement._id;
-        coll.replaceOne({ _id: op.docId }, replacement);
-        log("✓", op.collection + ": modified " + op.docId);
-        succeeded++;
-      } else if (op.type === "delete") {
-        coll.deleteOne({ _id: op.docId });
-        log("✓", op.collection + ": deleted " + op.docId);
-        succeeded++;
-      } else if (op.type === "collection_drop") {
-        coll.drop();
-        log("✓", op.collection + ": collection dropped");
-        succeeded++;
-      }
-    } catch (e) {
-      log("✗", op.collection + ": " + op.type + " " + (op.docId || "") + " failed: " + e.message);
-      failedOps.push({ op: op, error: e.message });
-      failed++;
-    }
-  }
-
-  return { succeeded, failed, failedOps };
-}
-
-// ─── Main ───
-print("═══ mongodiff apply script ═══");
-print("Database: " + DATABASE);
-print("Operations: " + OPERATIONS.length + " (${countSummary})");
-print("Mode: " + (DRY_RUN ? "DRY RUN" : "APPLY"));
-
-const conn = connect(CONNECTION_STRING);
-const db = conn.getSiblingDB(DATABASE);
-
-const errors = preflight(db);
-
-if (errors.length > 0) {
-  print("");
-  print("ABORT: " + errors.length + " validation error(s) found. No changes were made.");
-  quit(1);
-}
-
-if (DRY_RUN) {
-  print("");
-  print("✓ All " + OPERATIONS.length + " operations validated.");
-  print("Set DRY_RUN = false to apply changes.");
-  quit(0);
-}
-
-print("✓ All " + OPERATIONS.length + " operations validated.");
-
-const result = apply(db);
-
-print("");
-print("── Summary ──");
-print("Succeeded: " + result.succeeded + "/" + OPERATIONS.length);
-if (result.failed > 0) {
-  print("Failed: " + result.failed + " (see errors above)");
-  quit(1);
-}
-quit(0);
-`;
 }
 
 // ─── Sync ───
