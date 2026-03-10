@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/shamith/mongodiff/pkg/diff"
+	"github.com/shamith/mongodiff/pkg/profile"
 	mongoclient "github.com/shamith/mongodiff/pkg/mongo"
 	"github.com/shamith/mongodiff/pkg/output"
 	syncer "github.com/shamith/mongodiff/pkg/sync"
@@ -28,6 +29,12 @@ type diffRequest struct {
 type connectionTestRequest struct {
 	URI     string `json:"uri"`
 	Timeout int    `json:"timeout,omitempty"`
+}
+
+type listCollectionsRequest struct {
+	URI      string `json:"uri"`
+	Database string `json:"database"`
+	Timeout  int    `json:"timeout,omitempty"`
 }
 
 type errorResponse struct {
@@ -342,6 +349,95 @@ func runDiff(req diffRequest) (*diff.DiffResult, func(), error) {
 	}
 
 	return result, cleanup, nil
+}
+
+func (s *Server) handleGetProfiles(w http.ResponseWriter, r *http.Request) {
+	profiles, err := profile.Load(s.profilePath)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load profiles: "+err.Error())
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"profiles": profiles})
+}
+
+func (s *Server) handleSaveProfile(w http.ResponseWriter, r *http.Request) {
+	var p profile.Profile
+	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if p.Name == "" {
+		writeError(w, http.StatusBadRequest, "profile name is required")
+		return
+	}
+	profiles, err := profile.Load(s.profilePath)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load profiles: "+err.Error())
+		return
+	}
+	profiles = profile.Upsert(profiles, p)
+	if err := profile.Save(s.profilePath, profiles); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to save profiles: "+err.Error())
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"success": true})
+}
+
+func (s *Server) handleDeleteProfile(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	if name == "" {
+		writeError(w, http.StatusBadRequest, "profile name is required")
+		return
+	}
+	profiles, err := profile.Load(s.profilePath)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load profiles: "+err.Error())
+		return
+	}
+	profiles, found := profile.Delete(profiles, name)
+	if !found {
+		writeError(w, http.StatusNotFound, "profile not found")
+		return
+	}
+	if err := profile.Save(s.profilePath, profiles); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to save profiles: "+err.Error())
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"success": true})
+}
+
+func (s *Server) handleListCollections(w http.ResponseWriter, r *http.Request) {
+	var req listCollectionsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if req.URI == "" || req.Database == "" {
+		writeError(w, http.StatusBadRequest, "uri and database are required")
+		return
+	}
+	timeout := time.Duration(req.Timeout) * time.Second
+	if timeout == 0 {
+		timeout = 10 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	client, err := mongoclient.Connect(ctx, req.URI, timeout)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer client.Disconnect(context.Background())
+	collections, err := client.ListCollections(ctx, req.Database)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"collections": collections})
 }
 
 func writeError(w http.ResponseWriter, status int, message string) {
