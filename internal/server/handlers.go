@@ -37,6 +37,11 @@ type listCollectionsRequest struct {
 	Timeout  int    `json:"timeout,omitempty"`
 }
 
+type syncRequest struct {
+	diffRequest
+	Operations []syncer.SyncOperation `json:"operations,omitempty"`
+}
+
 type errorResponse struct {
 	Error string `json:"error"`
 }
@@ -204,7 +209,7 @@ func (s *Server) handleSyncDryRun(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleSync(w http.ResponseWriter, r *http.Request) {
-	var req diffRequest
+	var req syncRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -253,6 +258,11 @@ func (s *Server) handleSync(w http.ResponseWriter, r *http.Request) {
 	}
 	result.Source = mongoclient.RedactURI(req.Source)
 	result.Target = mongoclient.RedactURI(req.Target)
+
+	// Filter to selected operations if provided
+	if len(req.Operations) > 0 {
+		result = syncer.FilterResult(result, req.Operations)
+	}
 
 	syn := syncer.New(source, target)
 

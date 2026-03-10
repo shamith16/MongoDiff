@@ -14,6 +14,112 @@ import (
 	mongoclient "github.com/shamith/mongodiff/pkg/mongo"
 )
 
+// SyncOperation identifies a specific document operation selected by the user.
+type SyncOperation struct {
+	Collection string      `json:"collection"`
+	DocID      interface{} `json:"docId"`
+	Type       string      `json:"type"` // "insert", "modify", "delete"
+}
+
+// canonicalID converts a document ID to a string for cross-type comparison.
+// BSON ObjectIDs and their JSON-decoded hex strings both produce the same output.
+func canonicalID(id interface{}) string {
+	switch v := id.(type) {
+	case bson.ObjectID:
+		return v.Hex()
+	case string:
+		return v
+	case float64:
+		if v == float64(int64(v)) {
+			return fmt.Sprintf("%d", int64(v))
+		}
+		return fmt.Sprintf("%g", v)
+	case int32:
+		return fmt.Sprintf("%d", v)
+	case int64:
+		return fmt.Sprintf("%d", v)
+	default:
+		b, _ := json.Marshal(v)
+		return string(b)
+	}
+}
+
+// opDiffType maps frontend operation type strings to diff.DiffType.
+func opDiffType(opType string) diff.DiffType {
+	switch opType {
+	case "insert":
+		return diff.Added
+	case "delete":
+		return diff.Removed
+	case "modify":
+		return diff.Modified
+	default:
+		return ""
+	}
+}
+
+// FilterResult returns a copy of result containing only the specified operations.
+// Filtered collections use DiffType=Modified so Apply processes documents individually
+// rather than creating/dropping entire collections.
+func FilterResult(result *diff.DiffResult, ops []SyncOperation) *diff.DiffResult {
+	type opKey struct {
+		collection string
+		docID      string
+		diffType   diff.DiffType
+	}
+	selected := make(map[opKey]bool, len(ops))
+	for _, op := range ops {
+		selected[opKey{
+			collection: op.Collection,
+			docID:      canonicalID(op.DocID),
+			diffType:   opDiffType(op.Type),
+		}] = true
+	}
+
+	filtered := &diff.DiffResult{
+		Database: result.Database,
+		Source:   result.Source,
+		Target:   result.Target,
+	}
+
+	for _, coll := range result.Collections {
+		var filteredDocs []diff.DocumentDiff
+		for _, doc := range coll.Documents {
+			key := opKey{
+				collection: coll.Name,
+				docID:      canonicalID(doc.ID),
+				diffType:   doc.DiffType,
+			}
+			if selected[key] {
+				filteredDocs = append(filteredDocs, doc)
+			}
+		}
+		if len(filteredDocs) == 0 {
+			continue
+		}
+
+		filteredColl := coll
+		filteredColl.Documents = filteredDocs
+		// Always use Modified so Apply handles documents individually
+		// instead of creating/dropping entire collections.
+		filteredColl.DiffType = diff.Modified
+		filteredColl.Stats = diff.DiffStats{}
+		for _, doc := range filteredDocs {
+			switch doc.DiffType {
+			case diff.Added:
+				filteredColl.Stats.DocumentsAdded++
+			case diff.Removed:
+				filteredColl.Stats.DocumentsRemoved++
+			case diff.Modified:
+				filteredColl.Stats.DocumentsModified++
+			}
+		}
+		filtered.Collections = append(filtered.Collections, filteredColl)
+	}
+
+	return filtered
+}
+
 // SyncResult summarizes what was applied.
 type SyncResult struct {
 	CollectionsCreated int

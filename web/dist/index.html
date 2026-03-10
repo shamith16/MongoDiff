@@ -1643,6 +1643,11 @@ function closeModal() {
 
 async function applySync() {
   const data = getFormData();
+  data.operations = getSelectedOps().map(op => ({
+    collection: op.collection,
+    docId: op.docId,
+    type: op.type
+  }));
   document.getElementById('btnConfirmApply').disabled = true;
   const resultEl = document.getElementById('syncResultDisplay');
   resultEl.textContent = 'Applying...';
