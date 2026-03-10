@@ -28,6 +28,14 @@ func canonicalID(id interface{}) string {
 	case bson.ObjectID:
 		return v.Hex()
 	case string:
+		// Handle ObjectId("hex") format from JSON renderer
+		if len(v) == 36 && v[:10] == "ObjectId(\"" && v[35] == ')' {
+			return v[10:34]
+		}
+		// Strip surrounding quotes added by FormatValue for string IDs
+		if len(v) >= 2 && v[0] == '"' && v[len(v)-1] == '"' {
+			return v[1 : len(v)-1]
+		}
 		return v
 	case float64:
 		if v == float64(int64(v)) {

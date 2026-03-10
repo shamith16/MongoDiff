@@ -282,6 +282,9 @@ func TestCanonicalID_Types(t *testing.T) {
 		expected string
 	}{
 		{"ObjectID", oid, oid.Hex()},
+		{"ObjectId string", "ObjectId(\"" + oid.Hex() + "\")", oid.Hex()},
+		{"quoted string", "\"hello\"", "hello"},
+		{"quoted hex", "\"" + oid.Hex() + "\"", oid.Hex()},
 		{"string", "hello", "hello"},
 		{"hex string", oid.Hex(), oid.Hex()},
 		{"float64 int", float64(42), "42"},
