@@ -459,6 +459,19 @@
     .select-all-row label { font-size: 0.82rem; color: var(--text-muted); cursor: pointer; }
     .select-all-row input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
 
+    /* ─── Sync Progress ─── */
+    .sync-progress-bar {
+      height: 4px; border-radius: 2px; background: var(--bg-tertiary);
+      margin: 12px 0 8px; overflow: hidden;
+    }
+    .sync-progress-fill {
+      height: 100%; border-radius: 2px; background: var(--accent);
+      width: 0%; transition: width 0.6s ease;
+    }
+    .sync-progress-step {
+      font-size: 0.8rem; color: var(--text-muted); text-align: center;
+    }
+
     /* ─── History Page ─── */
     .history-page.active {
       display: flex; flex-direction: column; padding: 40px;
@@ -701,6 +714,10 @@
     <h3>Confirm Sync</h3>
     <p id="confirmText"></p>
     <div id="syncResultDisplay" class="hidden"></div>
+    <div id="syncProgressDisplay" class="hidden">
+      <div class="sync-progress-bar"><div class="sync-progress-fill" id="syncProgressFill"></div></div>
+      <div class="sync-progress-step" id="syncProgressStep"></div>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
       <button class="btn btn-danger" id="btnConfirmApply" onclick="applySync()">Apply Changes</button>
@@ -1704,7 +1721,7 @@ function showToast(msg) {
   toast.textContent = msg;
   toast.style.opacity = '1';
   if (toastTimer) clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { toast.style.opacity = '0'; }, 2000);
+  toastTimer = setTimeout(() => { toast.style.opacity = '0'; }, 4000);
 }
 
 // ─── Sync ───
@@ -1715,6 +1732,8 @@ function showSyncModal() {
   document.getElementById('confirmText').textContent =
     'This will apply ' + selected.length + ' operations to the target database "' + data.database + '". A backup will be created first.';
   document.getElementById('syncResultDisplay').classList.add('hidden');
+  document.getElementById('syncProgressDisplay').classList.add('hidden');
+  document.getElementById('syncProgressFill').style.width = '0%';
   document.getElementById('btnConfirmApply').disabled = false;
   document.getElementById('confirmModal').classList.remove('hidden');
 }
@@ -1731,9 +1750,33 @@ async function applySync() {
     type: op.type
   }));
   document.getElementById('btnConfirmApply').disabled = true;
+  document.querySelector('.modal-actions .btn-secondary').disabled = true;
+
   const resultEl = document.getElementById('syncResultDisplay');
-  resultEl.textContent = 'Applying...';
-  resultEl.classList.remove('hidden');
+  resultEl.classList.add('hidden');
+
+  const progressEl = document.getElementById('syncProgressDisplay');
+  const fillEl = document.getElementById('syncProgressFill');
+  const stepEl = document.getElementById('syncProgressStep');
+  progressEl.classList.remove('hidden');
+
+  const steps = [
+    { pct: 15, text: 'Connecting to databases...' },
+    { pct: 40, text: 'Running diff for type safety...' },
+    { pct: 60, text: 'Creating backup...' },
+    { pct: 80, text: 'Applying changes...' },
+  ];
+  let stepIdx = 0;
+  fillEl.style.width = steps[0].pct + '%';
+  stepEl.textContent = steps[0].text;
+
+  const stepTimer = setInterval(function() {
+    stepIdx++;
+    if (stepIdx < steps.length) {
+      fillEl.style.width = steps[stepIdx].pct + '%';
+      stepEl.textContent = steps[stepIdx].text;
+    }
+  }, 1500);
 
   try {
     const res = await fetch('/api/sync', {
@@ -1743,28 +1786,53 @@ async function applySync() {
     });
     const result = await res.json();
 
-    if (result.error) {
-      resultEl.className = 'connect-status connect-status-error';
-      resultEl.textContent = result.error;
-      return;
-    }
+    clearInterval(stepTimer);
+    fillEl.style.width = '100%';
+    stepEl.textContent = '';
 
-    const parts = [];
-    if (result.CollectionsCreated) parts.push(result.CollectionsCreated + ' collections created');
-    if (result.CollectionsDropped) parts.push(result.CollectionsDropped + ' collections dropped');
-    if (result.DocumentsInserted) parts.push(result.DocumentsInserted + ' documents inserted');
-    if (result.DocumentsReplaced) parts.push(result.DocumentsReplaced + ' documents replaced');
-    if (result.DocumentsDeleted) parts.push(result.DocumentsDeleted + ' documents deleted');
+    setTimeout(function() {
+      progressEl.classList.add('hidden');
+      fillEl.style.width = '0%';
 
-    resultEl.className = 'connect-status connect-status-info';
-    resultEl.textContent = 'Sync complete: ' + parts.join(', ') + (result.BackupPath ? '. Backup: ' + result.BackupPath : '');
+      if (result.error) {
+        resultEl.classList.remove('hidden');
+        resultEl.className = 'connect-status connect-status-error';
+        resultEl.textContent = result.error;
+        document.getElementById('btnConfirmApply').disabled = false;
+        document.querySelector('.modal-actions .btn-secondary').disabled = false;
+        return;
+      }
 
-    if (result.Errors && result.Errors.length) {
-      resultEl.textContent += '\nErrors: ' + result.Errors.join(', ');
-    }
+      // Success: close modal, show toast summary
+      closeModal();
+
+      const parts = [];
+      if (result.CollectionsCreated) parts.push(result.CollectionsCreated + ' collections created');
+      if (result.CollectionsDropped) parts.push(result.CollectionsDropped + ' collections dropped');
+      if (result.DocumentsInserted) parts.push(result.DocumentsInserted + ' inserted');
+      if (result.DocumentsReplaced) parts.push(result.DocumentsReplaced + ' replaced');
+      if (result.DocumentsDeleted) parts.push(result.DocumentsDeleted + ' deleted');
+
+      var msg;
+      if (parts.length === 0) {
+        msg = 'Sync complete: no changes applied';
+      } else {
+        msg = 'Sync complete: ' + parts.join(', ');
+      }
+      if (result.Errors && result.Errors.length) {
+        msg += ' (' + result.Errors.length + ' errors)';
+      }
+      showToast(msg);
+    }, 400);
   } catch (err) {
+    clearInterval(stepTimer);
+    progressEl.classList.add('hidden');
+    fillEl.style.width = '0%';
+    resultEl.classList.remove('hidden');
     resultEl.className = 'connect-status connect-status-error';
     resultEl.textContent = 'Failed: ' + err.message;
+    document.getElementById('btnConfirmApply').disabled = false;
+    document.querySelector('.modal-actions .btn-secondary').disabled = false;
   }
 }
 
