@@ -264,6 +264,18 @@ func (s *Server) handleSync(w http.ResponseWriter, r *http.Request) {
 		SourceToTarget:     req.SourceToTarget,
 	}
 
+	// Scope diff to only the collections referenced in selected operations
+	if len(req.Operations) > 0 {
+		collSet := make(map[string]bool)
+		for _, op := range req.Operations {
+			collSet[op.Collection] = true
+		}
+		opts.IncludeCollections = make([]string, 0, len(collSet))
+		for c := range collSet {
+			opts.IncludeCollections = append(opts.IncludeCollections, c)
+		}
+	}
+
 	differ := diff.New(source, target, opts)
 	result, err := differ.Diff(ctx, req.Database)
 	if err != nil {
@@ -327,8 +339,12 @@ func (s *Server) handleSync(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	if err := history.Append(s.historyDir, entry.Source, entry.Target, entry); err != nil {
-		fmt.Fprintf(os.Stderr, "warning: failed to write history: %v\n", err)
+	// Only log to history if something was actually applied
+	if syncResult.DocumentsInserted > 0 || syncResult.DocumentsReplaced > 0 || syncResult.DocumentsDeleted > 0 ||
+		syncResult.CollectionsCreated > 0 || syncResult.CollectionsDropped > 0 {
+		if err := history.Append(s.historyDir, entry.Source, entry.Target, entry); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: failed to write history: %v\n", err)
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -513,10 +529,21 @@ func (s *Server) handleGetHistory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	entries, err := history.Load(s.historyDir, mongoclient.RedactURI(req.Source), mongoclient.RedactURI(req.Target))
+	allEntries, err := history.Load(s.historyDir, mongoclient.RedactURI(req.Source), mongoclient.RedactURI(req.Target))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to load history: "+err.Error())
 		return
+	}
+
+	// Filter out empty entries (no actual changes applied)
+	var entries []history.Entry
+	for _, e := range allEntries {
+		if e.Summary.Inserted > 0 || e.Summary.Replaced > 0 || e.Summary.Deleted > 0 {
+			entries = append(entries, e)
+		}
+	}
+	if entries == nil {
+		entries = []history.Entry{}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
