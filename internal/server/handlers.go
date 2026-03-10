@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/shamith/mongodiff/pkg/diff"
@@ -291,6 +292,44 @@ func (s *Server) handleSync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	syncResult.BackupPath = backupPath
+
+	// Log the sync to history
+	entry := history.Entry{
+		ID:        history.NewID(),
+		Timestamp: time.Now().UTC(),
+		Source:    mongoclient.RedactURI(req.Source),
+		Target:    mongoclient.RedactURI(req.Target),
+		Database:  req.Database,
+		Summary: history.Summary{
+			Inserted: syncResult.DocumentsInserted,
+			Replaced: syncResult.DocumentsReplaced,
+			Deleted:  syncResult.DocumentsDeleted,
+		},
+		BackupPath: backupPath,
+	}
+	for _, coll := range result.Collections {
+		for _, doc := range coll.Documents {
+			var opType string
+			switch doc.DiffType {
+			case diff.Added:
+				opType = "insert"
+			case diff.Modified:
+				opType = "replace"
+			case diff.Removed:
+				opType = "delete"
+			}
+			if opType != "" {
+				entry.Operations = append(entry.Operations, history.Operation{
+					Collection: coll.Name,
+					DocID:      doc.ID,
+					Type:       opType,
+				})
+			}
+		}
+	}
+	if err := history.Append(s.historyDir, entry.Source, entry.Target, entry); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: failed to write history: %v\n", err)
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(syncResult)
