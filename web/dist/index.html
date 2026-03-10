@@ -498,8 +498,6 @@
     .history-entry-header {
       display: flex; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer;
     }
-    .history-entry-check { flex-shrink: 0; }
-    .history-entry-check input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
     .history-entry-time {
       font-size: 0.82rem; color: var(--text); font-weight: 500; min-width: 140px;
     }
@@ -520,21 +518,35 @@
       flex-shrink: 0;
     }
     .history-entry-detail {
-      display: none; padding: 0 16px 14px 44px; font-size: 0.82rem;
+      display: none; padding: 8px 16px 14px 16px; font-size: 0.82rem; line-height: 1.5;
     }
     .history-entry-detail.open { display: block; }
+    .history-entry-detail h2 { font-size: 0.88rem; color: var(--cyan); margin: 10px 0 6px; }
+    .history-entry-detail h3 { font-size: 0.82rem; color: var(--text); margin: 8px 0 4px; }
     .history-entry-detail table {
-      width: 100%; border-collapse: collapse; font-size: 0.8rem;
+      width: 100%; border-collapse: collapse; font-size: 0.8rem; margin: 6px 0;
     }
     .history-entry-detail th {
-      text-align: left; padding: 6px 10px; font-weight: 600; font-size: 0.72rem;
-      text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim);
-      border-bottom: 1px solid var(--border);
+      text-align: left; padding: 4px 8px; font-weight: 600; font-size: 0.72rem;
+      color: var(--text-dim); border-bottom: 1px solid var(--border);
     }
     .history-entry-detail td {
-      padding: 5px 10px; border-bottom: 1px solid var(--border);
+      padding: 4px 8px; border-bottom: 1px solid var(--border);
       font-family: 'SF Mono', 'Fira Code', monospace;
     }
+    .history-entry-detail code { background: var(--bg-tertiary); padding: 1px 4px; border-radius: 3px; font-size: 0.8rem; }
+    .history-entry-detail em { color: var(--text-dim); }
+    .history-entry-detail strong { color: var(--text); }
+    .history-entry-detail hr { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+    .history-entry-detail .detail-loading { color: var(--text-dim); font-style: italic; }
+    .detail-actions { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+    .btn-copy-ids {
+      background: rgba(139,233,253,0.12); color: var(--cyan); border: 1.5px solid var(--cyan);
+      padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.82rem;
+      font-family: inherit; font-weight: 600; transition: all 0.15s;
+      box-shadow: 0 1px 4px rgba(139,233,253,0.15);
+    }
+    .btn-copy-ids:hover { background: rgba(139,233,253,0.22); box-shadow: 0 2px 8px rgba(139,233,253,0.25); }
   </style>
 </head>
 <body>
@@ -730,10 +742,7 @@
   <div class="history-container">
     <div class="history-header">
       <h2>Sync History<span class="history-pair" id="historyPairDisplay"></span></h2>
-      <div class="history-actions">
-        <button class="btn btn-sm btn-secondary" onclick="exportHistory('markdown')">Copy Markdown</button>
-        <button class="btn btn-sm btn-secondary" onclick="exportHistory('mongosh')">Copy mongosh Script</button>
-      </div>
+      <div class="history-actions"></div>
     </div>
     <div id="historyList">
       <div class="history-empty">Enter connection URIs on the Connect tab to view sync history.</div>
@@ -1899,89 +1908,59 @@ function renderHistory() {
   const sorted = [...historyEntries].reverse();
 
   sorted.forEach(function(entry) {
-    const wrapper = document.createElement('div');
+    var wrapper = document.createElement('div');
     wrapper.className = 'history-entry';
 
-    const header = document.createElement('div');
+    var header = document.createElement('div');
     header.className = 'history-entry-header';
 
-    const check = document.createElement('div');
-    check.className = 'history-entry-check';
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.dataset.id = entry.id;
-    cb.addEventListener('click', function(e) { e.stopPropagation(); });
-    check.appendChild(cb);
-
-    const timeEl = document.createElement('span');
+    var timeEl = document.createElement('span');
     timeEl.className = 'history-entry-time';
     timeEl.textContent = formatRelativeTime(entry.timestamp);
     timeEl.title = new Date(entry.timestamp).toLocaleString();
 
-    const dbEl = document.createElement('span');
+    var dbEl = document.createElement('span');
     dbEl.className = 'history-entry-db';
     dbEl.textContent = entry.database;
 
-    const badges = document.createElement('div');
+    var badges = document.createElement('div');
     badges.className = 'history-entry-badges';
     if (entry.summary.inserted) {
-      const b = document.createElement('span');
+      var b = document.createElement('span');
       b.className = 'history-entry-badge history-entry-badge-insert';
       b.textContent = '+' + entry.summary.inserted;
       badges.appendChild(b);
     }
     if (entry.summary.replaced) {
-      const b = document.createElement('span');
-      b.className = 'history-entry-badge history-entry-badge-replace';
-      b.textContent = '~' + entry.summary.replaced;
-      badges.appendChild(b);
+      var b2 = document.createElement('span');
+      b2.className = 'history-entry-badge history-entry-badge-replace';
+      b2.textContent = '~' + entry.summary.replaced;
+      badges.appendChild(b2);
     }
     if (entry.summary.deleted) {
-      const b = document.createElement('span');
-      b.className = 'history-entry-badge history-entry-badge-delete';
-      b.textContent = '-' + entry.summary.deleted;
-      badges.appendChild(b);
+      var b3 = document.createElement('span');
+      b3.className = 'history-entry-badge history-entry-badge-delete';
+      b3.textContent = '-' + entry.summary.deleted;
+      badges.appendChild(b3);
     }
 
-    const toggle = document.createElement('button');
+    var toggle = document.createElement('button');
     toggle.className = 'history-entry-toggle';
     toggle.textContent = '+';
 
-    header.append(check, timeEl, dbEl, badges, toggle);
+    header.append(timeEl, dbEl, badges, toggle);
 
-    const detail = document.createElement('div');
+    var detail = document.createElement('div');
     detail.className = 'history-entry-detail';
-    if (entry.operations && entry.operations.length > 0) {
-      const table = document.createElement('table');
-      const thead = document.createElement('thead');
-      const headRow = document.createElement('tr');
-      ['Collection', 'Document ID', 'Type'].forEach(function(text) {
-        const th = document.createElement('th');
-        th.textContent = text;
-        headRow.appendChild(th);
-      });
-      thead.appendChild(headRow);
-      table.appendChild(thead);
-
-      const tbody = document.createElement('tbody');
-      entry.operations.forEach(function(op) {
-        const tr = document.createElement('tr');
-        const tdColl = document.createElement('td');
-        tdColl.textContent = op.collection;
-        const tdId = document.createElement('td');
-        tdId.textContent = op.docId;
-        const tdType = document.createElement('td');
-        tdType.textContent = op.type;
-        tr.append(tdColl, tdId, tdType);
-        tbody.appendChild(tr);
-      });
-      table.appendChild(tbody);
-      detail.appendChild(table);
-    }
+    var detailLoaded = false;
 
     header.addEventListener('click', function() {
-      detail.classList.toggle('open');
-      toggle.textContent = detail.classList.contains('open') ? '\u2212' : '+';
+      var isOpen = detail.classList.toggle('open');
+      toggle.textContent = isOpen ? '\u2212' : '+';
+      if (isOpen && !detailLoaded) {
+        detailLoaded = true;
+        loadEntryReport(detail, entry);
+      }
     });
 
     wrapper.append(header, detail);
@@ -1989,37 +1968,177 @@ function renderHistory() {
   });
 }
 
-function getSelectedHistoryIds() {
-  const checkboxes = document.querySelectorAll('.history-entry-check input:checked');
-  return Array.from(checkboxes).map(function(cb) { return cb.dataset.id; });
-}
+async function loadEntryReport(container, entry) {
+  var loading = document.createElement('div');
+  loading.className = 'detail-loading';
+  loading.textContent = 'Loading report\u2026';
+  container.appendChild(loading);
 
-async function exportHistory(format) {
-  const source = document.getElementById('source').value;
-  const target = document.getElementById('target').value;
-  if (!source || !target) return;
-
-  const entryIds = getSelectedHistoryIds();
-  if (entryIds.length === 0) {
-    showToast('Select history entries to export');
-    return;
-  }
-
+  var source = document.getElementById('source').value;
+  var target = document.getElementById('target').value;
   try {
-    const res = await fetch('/api/history/export', {
+    var res = await fetch('/api/history/export', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ source, target, entryIds, format })
+      body: JSON.stringify({ source: source, target: target, entryIds: [entry.id], format: 'markdown' })
     });
-    const data = await res.json();
+    var data = await res.json();
+    container.removeChild(loading);
     if (data.error) {
-      showToast('Export failed: ' + data.error);
+      var err = document.createElement('div');
+      err.style.color = 'var(--red)';
+      err.textContent = 'Failed: ' + data.error;
+      container.appendChild(err);
       return;
     }
-    await navigator.clipboard.writeText(data.text);
-    showToast('Copied ' + format + ' to clipboard');
-  } catch (err) {
-    showToast('Export failed: ' + err.message);
+    renderMarkdownToElement(container, data.text);
+    appendCopyIdsButton(container, entry);
+  } catch (e) {
+    container.removeChild(loading);
+    var errEl = document.createElement('div');
+    errEl.style.color = 'var(--red)';
+    errEl.textContent = 'Failed: ' + e.message;
+    container.appendChild(errEl);
+  }
+}
+
+function appendCopyIdsButton(container, entry) {
+  if (!entry.operations || entry.operations.length === 0) return;
+  var actions = document.createElement('div');
+  actions.className = 'detail-actions';
+  var copyBtn = document.createElement('button');
+  copyBtn.className = 'btn-copy-ids';
+  copyBtn.textContent = '\u2398 Copy affected document IDs for PR description';
+  copyBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    copyEntryIds(entry);
+  });
+  actions.appendChild(copyBtn);
+  container.appendChild(actions);
+}
+
+function copyEntryIds(entry) {
+  if (!entry.operations || entry.operations.length === 0) {
+    showToast('No operations to copy');
+    return;
+  }
+  var colls = {};
+  var collOrder = [];
+  entry.operations.forEach(function(op) {
+    if (!colls[op.collection]) {
+      colls[op.collection] = { modified: [], inserted: [], deleted: [] };
+      collOrder.push(op.collection);
+    }
+    var id = String(op.docId);
+    if (op.type === 'replace') colls[op.collection].modified.push(id);
+    else if (op.type === 'insert') colls[op.collection].inserted.push(id);
+    else if (op.type === 'delete') colls[op.collection].deleted.push(id);
+  });
+
+  var lines = [];
+  collOrder.forEach(function(name) {
+    var g = colls[name];
+    lines.push(name + ':');
+    if (g.modified.length) lines.push('  modified: ' + g.modified.join(', '));
+    if (g.inserted.length) lines.push('  inserted: ' + g.inserted.join(', '));
+    if (g.deleted.length) lines.push('  deleted: ' + g.deleted.join(', '));
+  });
+
+  navigator.clipboard.writeText(lines.join('\n')).then(function() {
+    showToast('Copied IDs to clipboard');
+  });
+}
+
+function renderMarkdownToElement(container, md) {
+  var lines = md.split('\n');
+  var i = 0;
+  while (i < lines.length) {
+    var line = lines[i];
+    // Table block
+    if (line.startsWith('|')) {
+      var tableLines = [];
+      while (i < lines.length && lines[i].startsWith('|')) {
+        tableLines.push(lines[i]);
+        i++;
+      }
+      var table = document.createElement('table');
+      var isHeader = true;
+      for (var ti = 0; ti < tableLines.length; ti++) {
+        var tl = tableLines[ti];
+        var cells = tl.split('|').filter(function(c) { return c.trim() !== ''; });
+        if (/^[-| ]+$/.test(tl.replace(/\|/g, '').trim())) continue;
+        var tr = document.createElement('tr');
+        for (var ci = 0; ci < cells.length; ci++) {
+          var cell = document.createElement(isHeader ? 'th' : 'td');
+          renderInline(cell, cells[ci].trim());
+          tr.appendChild(cell);
+        }
+        if (isHeader) {
+          var thead = document.createElement('thead');
+          thead.appendChild(tr);
+          table.appendChild(thead);
+          isHeader = false;
+        } else {
+          table.appendChild(tr);
+        }
+      }
+      container.appendChild(table);
+      continue;
+    }
+    // Headings
+    if (line.startsWith('### ')) {
+      var h = document.createElement('h3');
+      renderInline(h, line.slice(4));
+      container.appendChild(h);
+      i++; continue;
+    }
+    if (line.startsWith('## ')) {
+      var h2 = document.createElement('h2');
+      renderInline(h2, line.slice(3));
+      container.appendChild(h2);
+      i++; continue;
+    }
+    if (line.startsWith('# ')) {
+      var h1 = document.createElement('h1');
+      renderInline(h1, line.slice(2));
+      container.appendChild(h1);
+      i++; continue;
+    }
+    // HR
+    if (line.trim() === '---') {
+      container.appendChild(document.createElement('hr'));
+      i++; continue;
+    }
+    // Empty line
+    if (line.trim() === '') { i++; continue; }
+    // Text line
+    var p = document.createElement('div');
+    renderInline(p, line);
+    container.appendChild(p);
+    i++;
+  }
+}
+
+function renderInline(el, text) {
+  // Process bold, italic, code as text nodes and styled spans
+  var parts = text.split(/(\*\*[^*]+\*\*|_[^_]+_|`[^`]+`)/);
+  for (var pi = 0; pi < parts.length; pi++) {
+    var part = parts[pi];
+    if (part.startsWith('**') && part.endsWith('**')) {
+      var b = document.createElement('strong');
+      b.textContent = part.slice(2, -2);
+      el.appendChild(b);
+    } else if (part.startsWith('_') && part.endsWith('_') && part.length > 2) {
+      var em = document.createElement('em');
+      em.textContent = part.slice(1, -1);
+      el.appendChild(em);
+    } else if (part.startsWith('`') && part.endsWith('`')) {
+      var code = document.createElement('code');
+      code.textContent = part.slice(1, -1);
+      el.appendChild(code);
+    } else {
+      el.appendChild(document.createTextNode(part));
+    }
   }
 }
 
