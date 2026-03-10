@@ -2000,6 +2000,10 @@ async function exportHistory(format) {
   if (!source || !target) return;
 
   const entryIds = getSelectedHistoryIds();
+  if (entryIds.length === 0) {
+    showToast('Select history entries to export');
+    return;
+  }
 
   try {
     const res = await fetch('/api/history/export', {
