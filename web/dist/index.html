@@ -458,6 +458,70 @@
     }
     .select-all-row label { font-size: 0.82rem; color: var(--text-muted); cursor: pointer; }
     .select-all-row input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+
+    /* ─── History Page ─── */
+    .history-page.active {
+      display: flex; flex-direction: column; padding: 40px;
+      overflow-y: auto; align-items: center;
+    }
+    .history-container { width: 100%; max-width: 720px; }
+    .history-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 20px;
+    }
+    .history-header h2 { font-size: 1.1rem; }
+    .history-header .history-pair {
+      font-size: 0.82rem; color: var(--text-muted); font-weight: 400; margin-left: 8px;
+    }
+    .history-actions { display: flex; gap: 8px; }
+    .history-empty {
+      text-align: center; color: var(--text-dim); padding: 60px 20px; font-size: 0.9rem;
+    }
+    .history-entry {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;
+      margin-bottom: 8px; transition: border-color 0.15s;
+    }
+    .history-entry:hover { border-color: var(--border-light); }
+    .history-entry-header {
+      display: flex; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer;
+    }
+    .history-entry-check { flex-shrink: 0; }
+    .history-entry-check input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+    .history-entry-time {
+      font-size: 0.82rem; color: var(--text); font-weight: 500; min-width: 140px;
+    }
+    .history-entry-db {
+      font-size: 0.78rem; color: var(--text-muted); flex: 1;
+    }
+    .history-entry-badges { display: flex; gap: 6px; flex-shrink: 0; }
+    .history-entry-badge {
+      font-size: 0.72rem; padding: 2px 8px; border-radius: 10px; font-weight: 600;
+    }
+    .history-entry-badge-insert { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+    .history-entry-badge-replace { background: var(--yellow-bg); color: var(--yellow); border: 1px solid var(--yellow-border); }
+    .history-entry-badge-delete { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+    .history-entry-toggle {
+      width: 22px; height: 22px; border-radius: 4px; background: var(--bg-tertiary);
+      border: 1px solid var(--border); color: var(--text-muted); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: 0.8rem;
+      flex-shrink: 0;
+    }
+    .history-entry-detail {
+      display: none; padding: 0 16px 14px 44px; font-size: 0.82rem;
+    }
+    .history-entry-detail.open { display: block; }
+    .history-entry-detail table {
+      width: 100%; border-collapse: collapse; font-size: 0.8rem;
+    }
+    .history-entry-detail th {
+      text-align: left; padding: 6px 10px; font-weight: 600; font-size: 0.72rem;
+      text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim);
+      border-bottom: 1px solid var(--border);
+    }
+    .history-entry-detail td {
+      padding: 5px 10px; border-bottom: 1px solid var(--border);
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
   </style>
 </head>
 <body>
@@ -471,6 +535,7 @@
   <div class="nav-tabs">
     <button class="nav-tab active" data-page="connect" onclick="showPage('connect')">Connect</button>
     <button class="nav-tab" data-page="diff" onclick="showPage('diff')">Changesets</button>
+    <button class="nav-tab" data-page="history" onclick="showPage('history')">History</button>
   </div>
   <div class="nav-right">
     <span class="nav-version">v0.2.0</span>
@@ -643,6 +708,22 @@
   </div>
 </div>
 
+<!-- ─── History Page ─── -->
+<div id="pageHistory" class="page history-page">
+  <div class="history-container">
+    <div class="history-header">
+      <h2>Sync History<span class="history-pair" id="historyPairDisplay"></span></h2>
+      <div class="history-actions">
+        <button class="btn btn-sm btn-secondary" onclick="exportHistory('markdown')">Copy Markdown</button>
+        <button class="btn btn-sm btn-secondary" onclick="exportHistory('mongosh')">Copy mongosh Script</button>
+      </div>
+    </div>
+    <div id="historyList">
+      <div class="history-empty">Enter connection URIs on the Connect tab to view sync history.</div>
+    </div>
+  </div>
+</div>
+
 <script>
 // ─── State ───
 let lastDiffData = null;
@@ -676,6 +757,7 @@ function showPage(name) {
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('page' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('active');
   document.querySelector('.nav-tab[data-page="' + name + '"]').classList.add('active');
+  if (name === 'history') loadHistory();
 }
 
 // ─── Connection Testing ───
@@ -1684,6 +1766,203 @@ async function applySync() {
     resultEl.className = 'connect-status connect-status-error';
     resultEl.textContent = 'Failed: ' + err.message;
   }
+}
+
+// ─── History ───
+let historyEntries = [];
+
+async function loadHistory() {
+  const source = document.getElementById('source').value;
+  const target = document.getElementById('target').value;
+  const list = document.getElementById('historyList');
+  const pairDisplay = document.getElementById('historyPairDisplay');
+
+  if (!source || !target) {
+    list.replaceChildren();
+    const empty = document.createElement('div');
+    empty.className = 'history-empty';
+    empty.textContent = 'Enter connection URIs on the Connect tab to view sync history.';
+    list.appendChild(empty);
+    pairDisplay.textContent = '';
+    return;
+  }
+
+  try {
+    pairDisplay.textContent = '';
+    const res = await fetch('/api/history', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source, target })
+    });
+    const data = await res.json();
+    historyEntries = data.entries || [];
+
+    if (historyEntries.length === 0) {
+      list.replaceChildren();
+      const empty = document.createElement('div');
+      empty.className = 'history-empty';
+      empty.textContent = 'No sync history for this connection pair.';
+      list.appendChild(empty);
+      return;
+    }
+
+    try {
+      const s = new URL(source).hostname || source;
+      const t = new URL(target).hostname || target;
+      pairDisplay.textContent = ' \u2014 ' + s + ' \u2192 ' + t;
+    } catch (_) {
+      pairDisplay.textContent = '';
+    }
+
+    renderHistory();
+  } catch (err) {
+    list.replaceChildren();
+    const empty = document.createElement('div');
+    empty.className = 'history-empty';
+    empty.textContent = 'Failed to load history: ' + err.message;
+    list.appendChild(empty);
+  }
+}
+
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  list.replaceChildren();
+
+  const sorted = [...historyEntries].reverse();
+
+  sorted.forEach(function(entry) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'history-entry';
+
+    const header = document.createElement('div');
+    header.className = 'history-entry-header';
+
+    const check = document.createElement('div');
+    check.className = 'history-entry-check';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.dataset.id = entry.id;
+    cb.addEventListener('click', function(e) { e.stopPropagation(); });
+    check.appendChild(cb);
+
+    const timeEl = document.createElement('span');
+    timeEl.className = 'history-entry-time';
+    timeEl.textContent = formatRelativeTime(entry.timestamp);
+    timeEl.title = new Date(entry.timestamp).toLocaleString();
+
+    const dbEl = document.createElement('span');
+    dbEl.className = 'history-entry-db';
+    dbEl.textContent = entry.database;
+
+    const badges = document.createElement('div');
+    badges.className = 'history-entry-badges';
+    if (entry.summary.inserted) {
+      const b = document.createElement('span');
+      b.className = 'history-entry-badge history-entry-badge-insert';
+      b.textContent = '+' + entry.summary.inserted;
+      badges.appendChild(b);
+    }
+    if (entry.summary.replaced) {
+      const b = document.createElement('span');
+      b.className = 'history-entry-badge history-entry-badge-replace';
+      b.textContent = '~' + entry.summary.replaced;
+      badges.appendChild(b);
+    }
+    if (entry.summary.deleted) {
+      const b = document.createElement('span');
+      b.className = 'history-entry-badge history-entry-badge-delete';
+      b.textContent = '-' + entry.summary.deleted;
+      badges.appendChild(b);
+    }
+
+    const toggle = document.createElement('button');
+    toggle.className = 'history-entry-toggle';
+    toggle.textContent = '+';
+
+    header.append(check, timeEl, dbEl, badges, toggle);
+
+    const detail = document.createElement('div');
+    detail.className = 'history-entry-detail';
+    if (entry.operations && entry.operations.length > 0) {
+      const table = document.createElement('table');
+      const thead = document.createElement('thead');
+      const headRow = document.createElement('tr');
+      ['Collection', 'Document ID', 'Type'].forEach(function(text) {
+        const th = document.createElement('th');
+        th.textContent = text;
+        headRow.appendChild(th);
+      });
+      thead.appendChild(headRow);
+      table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+      entry.operations.forEach(function(op) {
+        const tr = document.createElement('tr');
+        const tdColl = document.createElement('td');
+        tdColl.textContent = op.collection;
+        const tdId = document.createElement('td');
+        tdId.textContent = op.docId;
+        const tdType = document.createElement('td');
+        tdType.textContent = op.type;
+        tr.append(tdColl, tdId, tdType);
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      detail.appendChild(table);
+    }
+
+    header.addEventListener('click', function() {
+      detail.classList.toggle('open');
+      toggle.textContent = detail.classList.contains('open') ? '\u2212' : '+';
+    });
+
+    wrapper.append(header, detail);
+    list.appendChild(wrapper);
+  });
+}
+
+function getSelectedHistoryIds() {
+  const checkboxes = document.querySelectorAll('.history-entry-check input:checked');
+  return Array.from(checkboxes).map(function(cb) { return cb.dataset.id; });
+}
+
+async function exportHistory(format) {
+  const source = document.getElementById('source').value;
+  const target = document.getElementById('target').value;
+  if (!source || !target) return;
+
+  const entryIds = getSelectedHistoryIds();
+
+  try {
+    const res = await fetch('/api/history/export', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source, target, entryIds, format })
+    });
+    const data = await res.json();
+    if (data.error) {
+      showToast('Export failed: ' + data.error);
+      return;
+    }
+    await navigator.clipboard.writeText(data.text);
+    showToast('Copied ' + format + ' to clipboard');
+  } catch (err) {
+    showToast('Export failed: ' + err.message);
+  }
+}
+
+function formatRelativeTime(timestamp) {
+  const now = Date.now();
+  const then = new Date(timestamp).getTime();
+  const diff = now - then;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + 'm ago';
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return hours + 'h ago';
+  const days = Math.floor(hours / 24);
+  if (days < 30) return days + 'd ago';
+  return new Date(timestamp).toLocaleDateString();
 }
 </script>
 </body>
