@@ -93,6 +93,14 @@ mongodiff serve --port 3000
 
 Open `http://localhost:8080` for a browser-based UI with connection testing, live-streaming diff results, sync controls, and dark/light theme.
 
+#### Saved Profiles
+
+Click **Profiles** in the connect section to open the profiles panel. Save your current connection configuration (URIs, database, preferences, selected collections) and load it later with one click. Profiles are stored globally in `~/.mongodiff/profiles.json`.
+
+#### Collection Selection
+
+Choose between diffing **All collections** (default) or **Only selected** collections. The "Only selected" mode shows a transfer list of available collections fetched from your database — move collections between "Available" and "Selected" panes.
+
 #### Copy Document IDs
 
 Click **Copy IDs** to copy the `_id` values of all selected operations to your clipboard, grouped by collection. Useful for quick lookups or sharing with teammates.
