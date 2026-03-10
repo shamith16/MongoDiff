@@ -75,11 +75,15 @@
 
     /* ─── Connect Page ─── */
     .connect-page.active {
-      display: flex; align-items: center; justify-content: center; padding: 40px;
+      display: flex; flex-direction: row; padding: 0;
+    }
+    .connect-main {
+      flex: 1; overflow-y: auto; padding: 40px;
+      display: flex; justify-content: center; align-items: flex-start;
     }
     .connect-card {
       background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
-      padding: 32px; width: 100%; max-width: 640px;
+      padding: 32px; width: 100%; max-width: 640px; margin: auto 0;
     }
     .connect-card h2 { font-size: 1.1rem; margin-bottom: 20px; }
     .form-group { margin-bottom: 16px; }
@@ -489,6 +493,7 @@
     </div>
   </div>
 
+  <div class="connect-main">
   <div class="connect-card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
       <h2 style="margin:0">Database Connections</h2>
@@ -570,6 +575,7 @@
       <button class="btn btn-primary" id="btnDiff" onclick="runDiff()">Run Diff</button>
     </div>
   </div>
+  </div>
 </div>
 
 <!-- ─── Diff Page ─── -->
@@ -601,7 +607,6 @@
       <div class="content-header-right">
         <span class="selection-counter" id="selectionCounter"></span>
         <button class="btn btn-sm btn-secondary" id="btnCopyIds" onclick="copyIds()">Copy IDs</button>
-        <button class="btn btn-sm btn-secondary" id="btnDownload" onclick="downloadJSON()">Download JSON</button>
         <button class="btn btn-sm btn-sync" id="btnApplySelected" onclick="showSyncModal()">Apply Selected</button>
       </div>
     </div>
@@ -1578,18 +1583,6 @@ function showConnectStatus(msg, type) {
   el.className = 'connect-status connect-status-' + type;
   el.textContent = msg;
   el.classList.remove('hidden');
-}
-
-// ─── Download ───
-function downloadJSON() {
-  if (!lastDiffData) return;
-  const blob = new Blob([JSON.stringify(lastDiffData, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'mongodiff-' + (lastDiffData.database || 'result') + '.json';
-  a.click();
-  URL.revokeObjectURL(url);
 }
 
 // ─── Copy IDs ───
